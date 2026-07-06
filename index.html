@@ -1052,6 +1052,19 @@ main {
 /* backup */
 .fin-backup-hint { font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.5;padding:0 2px; }
 
+/* seções colapsáveis (Resumo Anual / Backup) — reduz rolagem na aba Financeiro */
+.fin-collapse-toggle {
+  font-size:9px; font-weight:800; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--gold-dim); margin:20px 0 0; display:flex; align-items:center; gap:8px;
+  cursor:pointer; user-select:none; background:none; border:none; width:100%;
+  padding:10px 2px; text-align:left;
+}
+.fin-collapse-toggle::after { content:''; flex:1; height:1px; background:var(--border); }
+.fin-collapse-arrow { font-size:9px; color:var(--muted); transition:transform .2s; flex-shrink:0; }
+.fin-collapse-toggle.open .fin-collapse-arrow { transform:rotate(180deg); }
+.fin-collapse-body { display:none; padding-top:7px; }
+.fin-collapse-body.open { display:block; }
+
 /* ─── LOGIN SCREEN ──────────────────────────────────────────── */
 .login-screen {
   position:fixed;
@@ -1523,32 +1536,42 @@ main {
 
     <div id="fin-exp-list"></div>
 
-    <!-- ── RELATÓRIO ANUAL ── -->
-    <div class="section-label" style="margin-top:20px">📊 Resumo Anual 2026</div>
-    <div class="fin-chart-wrap">
-      <div id="fin-chart"></div>
-      <div class="fin-chart-legend">
-        <span><span class="fin-chart-dot" style="background:#3DBE6B"></span>Saldo positivo</span>
-        <span><span class="fin-chart-dot" style="background:var(--red)"></span>Saldo negativo</span>
-      </div>
+    <!-- ── RELATÓRIO ANUAL (colapsável — fechado por padrão) ── -->
+    <div class="fin-collapse-toggle" onclick="finToggleCollapse(this)">
+      📊 Resumo Anual 2026
+      <span class="fin-collapse-arrow">▾</span>
     </div>
-    <div id="fin-annual-table"></div>
+    <div class="fin-collapse-body">
+      <div class="fin-chart-wrap">
+        <div id="fin-chart"></div>
+        <div class="fin-chart-legend">
+          <span><span class="fin-chart-dot" style="background:#3DBE6B"></span>Saldo positivo</span>
+          <span><span class="fin-chart-dot" style="background:var(--red)"></span>Saldo negativo</span>
+        </div>
+      </div>
+      <div id="fin-annual-table"></div>
+    </div>
 
     <!-- ── ENVIAR RELATÓRIO ── -->
     <button class="btn btn-full wa-btn" style="margin-top:16px;margin-bottom:4px" onclick="finSendWA()">
       📤 Enviar Fechamento p/ WhatsApp
     </button>
 
-    <!-- ── BACKUP E SEGURANÇA ── -->
-    <div class="section-label" style="margin-top:20px">💾 Backup e Segurança</div>
-    <div class="fin-backup-hint">
-      Seus dados ficam salvos apenas neste navegador. Exporte um backup periodicamente para não correr o risco de perder o histórico.
+    <!-- ── BACKUP E SEGURANÇA (colapsável — sync em nuvem já é automático) ── -->
+    <div class="fin-collapse-toggle" onclick="finToggleCollapse(this)">
+      💾 Backup e Segurança
+      <span class="fin-collapse-arrow">▾</span>
     </div>
-    <div class="action-row">
-      <button class="btn btn-outline btn-sm" onclick="backupExport()">📥 Exportar Backup</button>
-      <button class="btn btn-ghost btn-sm" onclick="backupImportTrigger()">📤 Importar Backup</button>
+    <div class="fin-collapse-body">
+      <div class="fin-backup-hint">
+        Seus dados já sincronizam automaticamente na nuvem (Firebase). Use a exportação manual apenas como cópia extra de segurança — por exemplo, antes de trocar de aparelho ou navegador.
+      </div>
+      <div class="action-row">
+        <button class="btn btn-outline btn-sm" onclick="backupExport()">📥 Exportar Backup</button>
+        <button class="btn btn-ghost btn-sm" onclick="backupImportTrigger()">📤 Importar Backup</button>
+      </div>
+      <input type="file" id="backup-file-input" accept="application/json" style="display:none" onchange="backupImportFile(event)">
     </div>
-    <input type="file" id="backup-file-input" accept="application/json" style="display:none" onchange="backupImportFile(event)">
 
   </div>
 
@@ -2513,6 +2536,13 @@ document.addEventListener('keydown', e => {
   document.getElementById('vagas-modal-overlay').style.display = 'none';
 });
 
+// Expande/recolhe as seções colapsáveis da aba Financeiro (Resumo Anual, Backup)
+function finToggleCollapse(headerEl){
+  headerEl.classList.toggle('open');
+  const body = headerEl.nextElementSibling;
+  if(body) body.classList.toggle('open');
+}
+
 function renderFinAnnual(){
   const months = MONTHS.map((name, m) => {
     const k   = finKey(finYear, m);
@@ -2573,22 +2603,31 @@ function renderFinAnnual(){
 }
 
 // ─── GRÁFICO DE EVOLUÇÃO DO CAIXA (SVG puro, sem dependências) ──
+// Barras acima/abaixo da linha zero + rótulo do mês abaixo de cada barra,
+// para o gráfico fazer sentido sem precisar passar o dedo/mouse em cima.
 function renderFinChart(months, curM){
   const el = document.getElementById('fin-chart');
   if(!el) return;
 
-  const w = 320, h = 88, midY = h/2, barGap = 2;
+  const w = 320, h = 100, chartH = 78, midY = chartH/2, barGap = 3;
   const barW = w / months.length;
   const maxAbs = Math.max(1, ...months.map(m => Math.abs(m.bal)));
 
   const bars = months.map((m, i) => {
-    const barH = m.bal === 0 ? 0 : Math.abs(m.bal) / maxAbs * (midY - 8);
-    const x = i * barW + barGap/2;
-    const y = m.bal >= 0 ? midY - barH : midY;
+    const barH  = m.bal === 0 ? 0 : Math.abs(m.bal) / maxAbs * (midY - 6);
+    const x     = i * barW + barGap/2;
+    const y     = m.bal >= 0 ? midY - barH : midY;
     const color = m.bal > 0 ? '#3DBE6B' : m.bal < 0 ? '#E05252' : '#555';
     const isCur = i === curM;
-    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(barW-barGap).toFixed(1)}" height="${Math.max(barH,1).toFixed(1)}"
-      rx="1.5" fill="${color}" opacity="${isCur?1:0.75}"><title>${m.name}: ${finFmt(m.bal)}</title></rect>`;
+    const abbr  = m.name.slice(0,3);
+    const cx    = (x + (barW-barGap)/2).toFixed(1);
+    return `
+      <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(barW-barGap).toFixed(1)}" height="${Math.max(barH,1).toFixed(1)}"
+        rx="1.5" fill="${color}" opacity="${isCur?1:0.65}"${isCur?' style="stroke:var(--gold);stroke-width:1"':''}>
+        <title>${m.name}: ${finFmt(m.bal)}</title>
+      </rect>
+      <text x="${cx}" y="${chartH+11}" font-size="7" text-anchor="middle"
+        style="fill:${isCur?'var(--gold)':'#666'};font-weight:${isCur?700:400}">${abbr}</text>`;
   }).join('');
 
   el.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none">
@@ -2717,6 +2756,22 @@ function finSendWA(){
   window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank');
 }
 
+// Conta quantos meses consecutivos (incluindo o atual) o jogador está devendo.
+// Para a contagem ao encontrar um mês pago ou um mês sem registro (fora do período controlado).
+function finMonthsOwed(name){
+  let y = finYear, m = finMonth, count = 0;
+  while(true){
+    const k  = finKey(y, m);
+    const md = finData.months[k];
+    if(!md) break;
+    if(md.paid.includes(name)) break;
+    count++;
+    m--;
+    if(m < 0){ m = 11; y--; }
+  }
+  return count;
+}
+
 // ─── WHATSAPP — COBRANÇA DE MENSALIDADES ───────────────────────
 function finSendCobranca(){
   const md     = finMonthData();
@@ -2730,7 +2785,8 @@ function finSendCobranca(){
   const pendList = players
     .filter(p => !p.isGuest && !md.paid.includes(p.name))
     .map(p => p.name)
-    .sort((a,b)=>a.localeCompare(b));
+    .sort((a,b)=>a.localeCompare(b))
+    .map(name => ({ name, months: finMonthsOwed(name) }));
 
   if(!pendList.length){
     toast('✅ Ninguém está pendente este mês!');
@@ -2752,8 +2808,16 @@ function finSendCobranca(){
   msg += `\n\n`;
 
   msg += `🔴 *Pendentes (${pendList.length}):*\n`;
-  msg += pendList.map((n,i)=>`${i+1}. ${n}`).join('\n');
+  msg += pendList.map((p,i)=>{
+    const tag = p.months > 1 ? ` ⚠️ _(${p.months} meses em atraso)_` : '';
+    return `${i+1}. ${p.name}${tag}`;
+  }).join('\n');
   msg += `\n\n`;
+
+  const atrasados = pendList.filter(p => p.months > 1).length;
+  if(atrasados > 0){
+    msg += `⚠️ *${atrasados} jogador(es) com mais de 1 mês em atraso.*\n\n`;
+  }
 
   msg += `${sep}\n`;
   msg += `_Quem ainda está pendente, por favor regularizar o quanto antes! 🙏_`;
