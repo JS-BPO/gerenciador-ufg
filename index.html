@@ -3165,10 +3165,13 @@ function backupImportFile(evt){
 // Estratégia: localStorage continua sendo a fonte instantânea (offline-first);
 // o Firestore é sincronizado em paralelo e propaga mudanças pra todo mundo em tempo real.
 let _fbUnsubPlayers = null, _fbUnsubFin = null;
+let _fbLastWriteTs = { players: 0, finData: 0 }; // timestamp da última escrita local — detecta eco da própria escrita
 
 function fbPush(doc, data){
   if(!fbDB || !fbAuth.currentUser) return; // sem conexão/login na nuvem = segue só local, sem erro
-  fbDB.collection('ufg').doc(doc).set({ data, updatedAt: Date.now() })
+  const ts = Date.now();
+  _fbLastWriteTs[doc] = ts;
+  fbDB.collection('ufg').doc(doc).set({ data, updatedAt: ts })
     .catch(err => console.warn('Firestore write ('+doc+'):', err.message));
 }
 
@@ -3179,9 +3182,9 @@ function fbStartSync(){
   // Presença + Elenco — qualquer autenticado (admin ou jogador) sincroniza
   _fbUnsubPlayers = fbDB.collection('ufg').doc('players').onSnapshot(snap => {
     if(!snap.exists) return;
-    const remote = snap.data().data;
-    if(JSON.stringify(remote) === JSON.stringify(players)) return; // já sincronizado, evita loop
-    players = remote;
+    const d = snap.data();
+    if(d.updatedAt === _fbLastWriteTs.players) return; // eco da própria escrita — ignora, evita o "piscar"
+    players = d.data;
     localStorage.setItem(KEY, JSON.stringify(players));
     renderPresence(); renderRoster(); syncFeeStatus();
   }, err => console.warn('Firestore sync (players):', err.message));
@@ -3190,9 +3193,9 @@ function fbStartSync(){
   if(currentRole === 'admin'){
     _fbUnsubFin = fbDB.collection('ufg').doc('finData').onSnapshot(snap => {
       if(!snap.exists) return;
-      const remote = snap.data().data;
-      if(JSON.stringify(remote) === JSON.stringify(finData)) return;
-      finData = remote;
+      const d = snap.data();
+      if(d.updatedAt === _fbLastWriteTs.finData) return;
+      finData = d.data;
       localStorage.setItem(FIN_KEY, JSON.stringify(finData));
       renderFin();
     }, err => console.warn('Firestore sync (finData):', err.message));
