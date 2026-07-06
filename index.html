@@ -458,6 +458,12 @@ main {
   gap:7px;
   margin-bottom:14px;
 }
+.fin-exp-form { flex-direction:column; }
+.fin-exp-form-row2 { display:flex; gap:7px; }
+.fin-exp-form-row2 .input-txt { min-width:0; } /* permite encolher de verdade dentro do flex (min-width:auto é o padrão do navegador) */
+.fin-exp-form-row2 select#fin-exp-cat { flex:1 1 0; padding:9px 6px; }
+.fin-exp-form-row2 input#fin-exp-val { flex:0 0 80px; }
+.fin-exp-form-row2 button { flex:0 0 auto; }
 
 .input-txt {
   flex:1;
@@ -1284,9 +1290,7 @@ main {
 .player-mode-ro #fin-exp-val,
 .player-mode-ro #fin-modal-overlay { display:none !important; }
 
-/* Jogador: nenhuma informação financeira visível em Dia de Jogo / Elenco */
-.player-mode-ro #legend-fee-pending,
-.player-mode-ro .badge-dot,
+/* Jogador: pode VER quem está pendente (legenda + indicador), mas não pode EDITAR valores/mensalidades */
 .player-mode-ro #ep-fee-wrap { display:none !important; }
 
 .player-mode-ro .presence-item.selected.pending {
@@ -1508,12 +1512,13 @@ main {
       Toda conta nasce como provisão (⏳) e só entra no saldo quando você tocar nela para marcar como paga (✓).
     </div>
 
-    <div class="add-form" style="margin-bottom:8px">
+    <div class="add-form fin-exp-form" style="margin-bottom:8px">
       <input class="input-txt" id="fin-exp-desc" type="text" placeholder="Descrição (ex: Ordem Quadra)" maxlength="40">
-      <select class="input-txt" id="fin-exp-cat" style="flex:0 0 104px;padding:9px 6px"></select>
-      <input class="input-txt" id="fin-exp-val"  type="number" min="0" step="0.01"
-             placeholder="R$" style="width:80px;flex:none">
-      <button class="btn btn-gold" onclick="finAddExpense()">➕</button>
+      <div class="fin-exp-form-row2">
+        <select class="input-txt" id="fin-exp-cat"></select>
+        <input class="input-txt" id="fin-exp-val" type="number" min="0" step="0.01" placeholder="R$">
+        <button class="btn btn-gold" onclick="finAddExpense()">➕</button>
+      </div>
     </div>
 
     <div id="fin-exp-list"></div>
