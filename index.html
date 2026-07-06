@@ -968,35 +968,46 @@ main {
 .fin-bal-val.negative { color:var(--red); }
 .fin-bal-val.zero     { color:var(--muted); }
 
-/* annual table */
-.fin-annual {
-  width:100%;
-  border-collapse:collapse;
-  font-size:11px;
+/* resumo anual — cards empilhados (evita rolagem horizontal em telas pequenas) */
+.fin-annual-list {
+  display:flex;
+  flex-direction:column;
+  gap:6px;
 }
-.fin-annual th {
-  background:var(--surface2);
-  color:var(--muted);
+.fin-annual-row {
+  background:var(--graphite);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);
+  padding:8px 10px;
+}
+.fin-annual-row.cur-month { background:rgba(212,175,55,.06); border-color:rgba(212,175,55,.35); }
+.fin-annual-row-top {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  font-size:12px;
   font-weight:700;
-  letter-spacing:.05em;
-  text-transform:uppercase;
-  padding:7px 10px;
-  border-bottom:1px solid var(--border);
-  text-align:left;
-}
-.fin-annual td {
-  padding:7px 10px;
-  border-bottom:1px solid #222;
   color:var(--white);
+}
+.fin-annual-row-detail {
+  display:flex;
+  gap:14px;
+  margin-top:4px;
+  font-size:10px;
   font-weight:600;
 }
-.fin-annual tr:last-child td { border-bottom:none; font-weight:800; color:var(--gold); background:var(--surface); }
-.fin-annual tr.cur-month td { background:rgba(212,175,55,.05); }
-.fin-annual .val-in  { color:#3DBE6B; }
-.fin-annual .val-out { color:var(--red); }
-.fin-annual .val-pos { color:#3DBE6B; font-weight:800; }
-.fin-annual .val-neg { color:var(--red); font-weight:800; }
-.fin-annual .val-zero { color:var(--muted); }
+.fin-annual-total {
+  background:var(--surface);
+  border-color:var(--gold);
+  margin-top:2px;
+}
+.fin-annual-total .fin-annual-row-top { font-weight:900; }
+.fin-annual-list .val-in   { color:#3DBE6B; }
+.fin-annual-list .val-out  { color:var(--red); }
+.fin-annual-list .val-pos  { color:#3DBE6B; font-weight:800; }
+.fin-annual-list .val-neg  { color:var(--red); font-weight:800; }
+.fin-annual-list .val-zero { color:var(--muted); }
 
 /* gráfico de evolução do caixa */
 .fin-chart-wrap {
@@ -2525,31 +2536,35 @@ function renderFinAnnual(){
   const rows = months.map(r => {
     const isCur = r.m === curM;
     const balCls = r.bal > 0 ? 'val-pos' : r.bal < 0 ? 'val-neg' : 'val-zero';
-    return `<tr class="${isCur?'cur-month':''}">
-      <td>${r.name}</td>
-      <td class="val-in">${r.inn>0?finFmt(r.inn):'-'}</td>
-      <td class="val-out">${r.out>0?finFmt(r.out):'-'}</td>
-      <td class="${balCls}">${(r.inn||r.out)?finFmt(r.bal):'-'}</td>
-    </tr>`;
+    return `
+    <div class="fin-annual-row ${isCur?'cur-month':''}">
+      <div class="fin-annual-row-top">
+        <span>${r.name}</span>
+        <span class="${balCls}">${(r.inn||r.out)?finFmt(r.bal):'-'}</span>
+      </div>
+      <div class="fin-annual-row-detail">
+        <span class="val-in">↑ ${r.inn>0?finFmt(r.inn):'-'}</span>
+        <span class="val-out">↓ ${r.out>0?finFmt(r.out):'-'}</span>
+      </div>
+    </div>`;
   }).join('');
 
   const totalBCls = totBal >= 0 ? 'val-pos' : 'val-neg';
 
   document.getElementById('fin-annual-table').innerHTML = `
-    <table class="fin-annual">
-      <thead><tr>
-        <th>Mês</th><th>Entradas</th><th>Saídas</th><th>Saldo</th>
-      </tr></thead>
-      <tbody>
-        ${rows}
-        <tr>
-          <td>TOTAL</td>
-          <td class="val-in">${finFmt(totIn)}</td>
-          <td class="val-out">${finFmt(totOut)}</td>
-          <td class="${totalBCls}">${finFmt(totBal)}</td>
-        </tr>
-      </tbody>
-    </table>`;
+    <div class="fin-annual-list">
+      ${rows}
+      <div class="fin-annual-row fin-annual-total">
+        <div class="fin-annual-row-top">
+          <span>TOTAL</span>
+          <span class="${totalBCls}">${finFmt(totBal)}</span>
+        </div>
+        <div class="fin-annual-row-detail">
+          <span class="val-in">↑ ${finFmt(totIn)}</span>
+          <span class="val-out">↓ ${finFmt(totOut)}</span>
+        </div>
+      </div>
+    </div>`;
 }
 
 // ─── GRÁFICO DE EVOLUÇÃO DO CAIXA (SVG puro, sem dependências) ──
@@ -3167,6 +3182,14 @@ function backupImportFile(evt){
 let _fbUnsubPlayers = null, _fbUnsubFin = null;
 let _fbLastWriteTs = { players: 0, finData: 0 }; // timestamp da última escrita local — detecta eco da própria escrita
 
+// Proteção contra "toque perdido": se uma atualização remota da Presença chegar
+// bem no instante de um toque/clique, o innerHTML seria reconstruído no meio da
+// interação e o navegador perderia o clique. Por isso, atualizações remotas que
+// chegarem durante uma interação ficam em espera e só são aplicadas ao final dela.
+let _presenceInteracting = false;
+let _presenceInteractingTimer = null;
+let _pendingRemotePlayers = null;
+
 function fbPush(doc, data){
   if(!fbDB || !fbAuth.currentUser) return; // sem conexão/login na nuvem = segue só local, sem erro
   const ts = Date.now();
@@ -3184,6 +3207,10 @@ function fbStartSync(){
     if(!snap.exists) return;
     const d = snap.data();
     if(d.updatedAt === _fbLastWriteTs.players) return; // eco da própria escrita — ignora, evita o "piscar"
+    if(_presenceInteracting){
+      _pendingRemotePlayers = d.data; // adia até o toque em andamento terminar
+      return;
+    }
     players = d.data;
     localStorage.setItem(KEY, JSON.stringify(players));
     renderPresence(); renderRoster(); syncFeeStatus();
@@ -3200,6 +3227,22 @@ function fbStartSync(){
       renderFin();
     }, err => console.warn('Firestore sync (finData):', err.message));
   }
+}
+
+// Marca início de interação na grade de Presença (mousedown/touchstart, via 'pointerdown'
+// cobre ambos). Aplica qualquer atualização remota que tenha ficado pendente ao final.
+function fbMarkPresenceInteraction(){
+  _presenceInteracting = true;
+  clearTimeout(_presenceInteractingTimer);
+  _presenceInteractingTimer = setTimeout(() => {
+    _presenceInteracting = false;
+    if(_pendingRemotePlayers){
+      players = _pendingRemotePlayers;
+      _pendingRemotePlayers = null;
+      localStorage.setItem(KEY, JSON.stringify(players));
+      renderPresence(); renderRoster(); syncFeeStatus();
+    }
+  }, 400);
 }
 
 function fbStopSync(){
@@ -3230,6 +3273,8 @@ updateStats();
 finPopulateCatSelect('fin-exp-cat');
 // Sync financial status on load (current month)
 syncFeeStatus();
+// Protege toques na grade de Presença contra perda por re-render simultâneo (ver fbMarkPresenceInteraction)
+document.getElementById('presence-list').addEventListener('pointerdown', fbMarkPresenceInteraction);
 </script>
 
 <script>
