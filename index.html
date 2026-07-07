@@ -1295,6 +1295,17 @@ textarea.wa-preview:focus { border-color:var(--gold); }
 .sync-status.error   { color:var(--red); }
 .sync-status.error   .dot { background:var(--red); }
 
+/* Pulso sutil no dot enquanto sincroniza — reforça o feedback visual
+   sem precisar do texto (essencial agora que o rótulo some no mobile) */
+.sync-status.syncing .dot { animation:syncPulse 1.1s ease-in-out infinite; }
+@keyframes syncPulse {
+  0%, 100% { box-shadow:0 0 0 0 rgba(212,175,55,.55); }
+  50%      { box-shadow:0 0 0 4px rgba(212,175,55,0); }
+}
+
+/* Indica que o dot é tocável (abre o status em toast no mobile) */
+.sync-status{ cursor:pointer; }
+
 .logout-btn {
   margin-left:auto;
   flex-shrink:0;
@@ -1317,6 +1328,26 @@ textarea.wa-preview:focus { border-color:var(--gold); }
   transform:translateY(-1px);
 }
 .logout-btn:active { transform:translateY(0); }
+
+/* Em telas estreitas, o rótulo textual do sync-status ("sincronizado",
+   "sincronizando…" etc.) espreme o header-title e some com a hierarquia
+   visual. Mantemos só o dot (com tooltip) e liberamos espaço pro título. */
+@media(max-width:480px){
+  .sync-status{ gap:0; }
+  .sync-status .sync-label{
+    position:absolute;
+    width:1px; height:1px;
+    padding:0; margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
+  }
+  .sync-status .dot{ width:9px; height:9px; }
+}
+@media(max-width:360px){
+  .header-bar{ gap:8px; padding:8px 10px; }
+}
 
 /* ─── PLAYER mode: full roster access, NO financial access ──── */
 .player-mode-ro #fin-recv-name,
@@ -1408,7 +1439,7 @@ textarea.wa-preview:focus { border-color:var(--gold); }
       <div class="header-title">União Figueira Grande</div>
       <div class="header-sub">Gerenciador Oficial UFG</div>
     </div>
-    <span id="sync-status" class="sync-status offline" title="Status de sincronização com a nuvem">
+    <span id="sync-status" class="sync-status offline" title="Status de sincronização com a nuvem" role="button" tabindex="0" aria-label="Ver status de sincronização">
       <span class="dot"></span><span class="sync-label">offline</span>
     </span>
     <button class="logout-btn" onclick="doLogout()" title="Sair">
@@ -3406,6 +3437,24 @@ function setSyncStatus(state){
   const label = el.querySelector('.sync-label');
   if(label) label.textContent = SYNC_LABELS[state] || state;
 }
+
+// Tap/click no dot exibe o status via toast — essencial no mobile, onde
+// o rótulo textual fica oculto (ver regra @media max-width:480px).
+(function initSyncStatusTap(){
+  const el = document.getElementById('sync-status');
+  if(!el) return;
+  const SYNC_ICONS = { synced:'🟢', syncing:'🟡', offline:'⚪', error:'🔴' };
+  const showSyncToast = () => {
+    const state = el.className.replace('sync-status', '').trim() || 'offline';
+    const label = SYNC_LABELS[state] || state;
+    const icon  = SYNC_ICONS[state] || '⚪';
+    toast(`${icon} ${label.charAt(0).toUpperCase() + label.slice(1)}`);
+  };
+  el.addEventListener('click', showSyncToast);
+  el.addEventListener('keydown', e => {
+    if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); showSyncToast(); }
+  });
+})();
 
 function fbStartSync(){
   if(!fbDB) return;
