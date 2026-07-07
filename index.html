@@ -310,12 +310,13 @@ main {
 }
 .presence-item.declined {
   border-color:var(--red);
-  background:rgba(224,82,82,.06);
-  opacity:.7;
+  border-width:2px;
+  background:rgba(224,82,82,.13);
 }
 .presence-item.declined .presence-name {
   text-decoration:line-through;
-  color:var(--muted);
+  color:var(--red);
+  font-weight:700;
 }
 
 .presence-check {
@@ -1303,7 +1304,7 @@ textarea.wa-preview:focus { border-color:var(--gold); }
 }
 .player-mode-ro .presence-item.declined {
   border-color:var(--red);
-  background:rgba(224,82,82,.06);
+  background:rgba(224,82,82,.13);
 }
 
 .player-mode-ro #fin-fee-grid .fin-fee-item { pointer-events:none !important; }
@@ -2963,8 +2964,13 @@ function buildConfirmationMessage(vagas){
   const gksReservados = gks.slice(0,2);          // no máx. 2 vagas de goleiro na lista
   const outros = [...gks.slice(2), ...rest];     // demais confirmados (inclui goleiro extra, se houver)
 
+  // Quem marcou "não vai jogar" na tela de presença
+  const declinados = players.filter(p=>p.declined).map(p=>p.name).sort((a,b)=>a.localeCompare(b));
+
   // Bloco monoespaçado (```) garante que a numeração não desalinhe no WhatsApp
-  let msg = `${WA_BRAND_HEADER}\nResponda com seu nome na vaga disponível 👇\n\n`;
+  let msg = `${WA_BRAND_HEADER}\n📋 *LISTA DE CONFIRMAÇÃO*\nQuem vai jogar? Responda com seu nome na numeração disponível. 👇\n\n`;
+
+  msg += '✅ *Confirmados*\n';
   msg += '```\n';
   for(let i=1;i<=vagas;i++){
     // Vagas 1-2: só preenche se houver goleiro confirmado; nunca usa jogador de linha
@@ -2973,7 +2979,17 @@ function buildConfirmationMessage(vagas){
   }
   msg += '```';
 
-  msg += `\n\n⏰ Confirme até o meio-dia do jogo.`;
+  // Seção só aparece se houver alguém recusado (evita bloco vazio)
+  if(declinados.length){
+    msg += `\n\n❌ *Não vão jogar*\n`;
+    msg += '```\n';
+    declinados.forEach((name,i)=>{
+      msg += `${String(i+1).padStart(2,'0')}. ${name}\n`;
+    });
+    msg += '```';
+  }
+
+  msg += `\n\n⏰ Confirme sua presença até o meio-dia do dia do jogo.\nSe não puder comparecer, avise no grupo para facilitar a organização e o fechamento da lista.`;
   return msg;
 }
 
