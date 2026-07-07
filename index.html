@@ -801,6 +801,14 @@ main {
   overflow-y:auto;
   font-family:'Courier New',monospace;
 }
+textarea.wa-preview {
+  width:100%;
+  min-height:160px;
+  resize:vertical;
+  outline:none;
+  box-sizing:border-box;
+}
+textarea.wa-preview:focus { border-color:var(--gold); }
 
 .fin-modal-actions {
   display:flex;
@@ -1652,6 +1660,24 @@ main {
     </div>
   </div>
 </div>
+<div id="cobranca-modal-overlay" class="fin-modal-overlay" style="display:none" onclick="finCobrancaModalCancel(event)">
+  <div class="fin-modal" onclick="event.stopPropagation()">
+    <div class="fin-modal-title">
+      <span>📤 Cobrança de Mensalidade</span>
+      <button class="fin-modal-close" onclick="finCobrancaModalCancel()">✕</button>
+    </div>
+    <div class="fin-modal-row" style="flex-direction:column;gap:12px">
+      <textarea id="cobranca-modal-preview" class="wa-preview" rows="10" spellcheck="false"></textarea>
+      <button type="button" class="btn btn-ghost btn-sm" style="width:100%" onclick="finCobrancaModalRestore()">
+        ↩️ Restaurar texto original
+      </button>
+    </div>
+    <div class="fin-modal-actions" style="margin-top:16px">
+      <button class="btn btn-gold" style="flex:1" onclick="finCobrancaModalSend()">📤 Enviar</button>
+      <button class="btn btn-ghost" onclick="finCobrancaModalCancel()">Cancelar</button>
+    </div>
+  </div>
+</div>
 <div id="fin-confirm-overlay" class="fin-modal-overlay" style="display:none" onclick="finConfirmCancel()">
   <div class="fin-modal" style="border-radius:var(--radius)" onclick="event.stopPropagation()">
     <div style="text-align:center;padding:4px 0 16px">
@@ -2067,6 +2093,11 @@ function finInit(){
 let finData   = finInit();
 let finYear   = new Date().getFullYear();
 let finMonth  = new Date().getMonth(); // 0-indexed
+
+// Identidade usada no cabeçalho de todas as mensagens de WhatsApp (cobrança,
+// fechamento e lista de confirmação). Centralizado aqui para não precisar
+// atualizar em 3 lugares se o nome do grupo mudar.
+const WA_BRAND_HEADER = '⚽ *Rachão de Sexta - UFG*';
 
 function finKey(y, m){ return `${y}-${m}`; }
 
@@ -2506,6 +2537,7 @@ document.addEventListener('keydown', e => {
   document.getElementById('fin-modal-overlay').style.display   = 'none';
   document.getElementById('fin-confirm-overlay').style.display = 'none';
   document.getElementById('vagas-modal-overlay').style.display = 'none';
+  document.getElementById('cobranca-modal-overlay').style.display = 'none';
 });
 
 // Expande/recolhe as seções colapsáveis da aba Financeiro (Resumo Anual, Backup)
@@ -2646,7 +2678,7 @@ function finSendWA(){
   let msg = '';
 
   // Cabeçalho
-  msg += `⚽ *UNIÃO FIGUEIRA GRANDE*\n`;
+  msg += `${WA_BRAND_HEADER}\n`;
   msg += `${sep}\n`;
   msg += `📋 *RELATÓRIO DE FECHAMENTO*\n`;
   msg += `📅 Competência: *${mLabel}*\n`;
@@ -2744,7 +2776,19 @@ function finMonthsOwed(name){
   return count;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// CONVENÇÃO DE TOM DAS MENSAGENS DE WHATSAPP (intencional, não inconsistência):
+//   • Cobrança e Lista de Confirmação → tom descontraído, falando direto com
+//     o grupo do racha (ex: "Bora deixar em dia pra seguirmos jogando").
+//   • Relatório de Fechamento (finSendWA) → tom formal/neutro, pois é peça
+//     financeira com saldo, provisões e subtotais — precisa de credibilidade
+//     e não deve ser alterado para um tom informal.
+//   Todas compartilham o mesmo cabeçalho de marca (WA_BRAND_HEADER).
+// ═══════════════════════════════════════════════════════════════
+
 // ─── WHATSAPP — COBRANÇA DE MENSALIDADES ───────────────────────
+let _cobrancaModalMsg = '';
+
 function finSendCobranca(){
   const md     = finMonthData();
   const dfv    = md.feeValue || 15;
@@ -2766,18 +2810,43 @@ function finSendCobranca(){
   }
 
   let msg = '';
-  msg += `⚽ *UFG · Cobrança* — ${mLabel}\n`;
-  msg += `📌 Valor: *${finFmt(dfv)}*\n\n`;
+  msg += `${WA_BRAND_HEADER}\n`;
+  msg += `Passando aqui pra lembrar da mensalidade de *${mLabel}* (*${finFmt(dfv)}*) — é ela que garante nosso jogo toda sexta! 🙌\n\n`;
 
-  msg += `✅ *Pagaram (${paidList.length}):* `;
+  msg += `✅ *Já pagaram (${paidList.length}):* `;
   msg += paidList.length ? paidList.join(', ') : '_Ninguém ainda_';
   msg += `\n\n`;
 
-  msg += `🔴 *Pendentes (${pendList.length}):*\n`;
+  msg += `🔴 *Ainda faltam (${pendList.length}):*\n`;
   msg += pendList.map(p => `• ${p.name}${p.months > 1 ? ` ⚠️${p.months}m` : ''}`).join('\n');
   msg += `\n\n`;
 
-  msg += `_Por favor, regularizar o quanto antes! 🙏_`;
+  msg += `Contamos com vocês! Bora deixar em dia pra seguirmos jogando tranquilos! 🥅💰`;
+
+  _cobrancaModalMsg = msg; // guarda o texto original, útil se no futuro quisermos um botão "restaurar"
+  document.getElementById('cobranca-modal-preview').value = msg;
+  document.getElementById('cobranca-modal-overlay').style.display = 'flex';
+}
+
+// Restaura o texto gerado automaticamente, descartando edições manuais no textarea
+function finCobrancaModalRestore(){
+  document.getElementById('cobranca-modal-preview').value = _cobrancaModalMsg;
+  toast('↩️ Texto original restaurado');
+}
+
+// Fecha o modal sem enviar (clique fora, no ✕, ou em "Cancelar")
+function finCobrancaModalCancel(e){
+  if(e && e.target !== document.getElementById('cobranca-modal-overlay')) return;
+  document.getElementById('cobranca-modal-overlay').style.display = 'none';
+}
+
+// Confirmação no modal → copia o texto (com eventuais edições do usuário) e abre o WhatsApp
+function finCobrancaModalSend(){
+  const msg = document.getElementById('cobranca-modal-preview').value.trim();
+  if(!msg){
+    toast('⚠️ A mensagem está vazia.');
+    return;
+  }
 
   navigator.clipboard.writeText(msg)
     .then(() => toast('✅ Cobrança copiada!'))
@@ -2789,6 +2858,7 @@ function finSendCobranca(){
     });
 
   window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank');
+  document.getElementById('cobranca-modal-overlay').style.display = 'none';
 }
 function fisherYates(arr){
   for(let i = arr.length - 1; i > 0; i--){
@@ -2894,7 +2964,7 @@ function buildConfirmationMessage(vagas){
   const outros = [...gks.slice(2), ...rest];     // demais confirmados (inclui goleiro extra, se houver)
 
   // Bloco monoespaçado (```) garante que a numeração não desalinhe no WhatsApp
-  let msg = `⚽ *RACHÃO UFG · Lista de Confirmação*\nResponda com seu nome na vaga disponível 👇\n\n`;
+  let msg = `${WA_BRAND_HEADER}\nResponda com seu nome na vaga disponível 👇\n\n`;
   msg += '```\n';
   for(let i=1;i<=vagas;i++){
     // Vagas 1-2: só preenche se houver goleiro confirmado; nunca usa jogador de linha
