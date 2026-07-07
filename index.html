@@ -787,28 +787,6 @@ main {
 .vagas-counter { font-size:10px; color:var(--muted); margin-top:5px; padding:0 2px; }
 .vagas-counter-warn { color:var(--red); font-weight:700; }
 
-/* chips de "não vão jogar" */
-.chips-box {
-  display:flex; flex-wrap:wrap; gap:6px;
-  margin-bottom:6px;
-}
-.chip {
-  display:inline-flex; align-items:center; gap:5px;
-  background:rgba(224,82,82,.1);
-  border:1px solid rgba(224,82,82,.3);
-  color:var(--red);
-  font-size:11px; font-weight:600;
-  border-radius:20px;
-  padding:4px 6px 4px 10px;
-}
-.chip-x {
-  background:none; border:none; color:var(--red);
-  font-size:11px; line-height:1; cursor:pointer;
-  width:16px; height:16px; border-radius:50%;
-  display:flex; align-items:center; justify-content:center;
-}
-.chip-x:active { background:rgba(224,82,82,.25); }
-
 /* preview da mensagem, estilo bolha de chat */
 .wa-preview {
   background:var(--graphite);
@@ -1662,12 +1640,6 @@ main {
           <button type="button" class="vagas-step-btn" onclick="vagasModalStep(1)">➕</button>
         </div>
         <div id="vagas-modal-counter" class="vagas-counter"></div>
-      </div>
-      <div class="fin-modal-field">
-        <label>❌ Quem não vai jogar? <span style="color:var(--muted2);font-weight:400">(opcional)</span></label>
-        <div class="chips-box" id="vagas-modal-naovao-chips"></div>
-        <input class="input-txt" id="vagas-modal-naovao-input" type="text"
-          placeholder="Digite um nome e pressione Enter" onkeydown="vagasModalNaovaoKeydown(event)">
       </div>
       <button type="button" class="btn btn-ghost btn-sm" style="width:100%" onclick="vagasModalTogglePreview()">
         👁️ Pré-visualizar mensagem
@@ -2651,7 +2623,7 @@ function finSendWA(){
   });
   const pendList = players
     .filter(p => !p.isGuest && !md.paid.includes(p.name))
-    .map(p => p.name);
+    .map(p => ({ name: p.name, months: finMonthsOwed(p.name) }));
 
   // Cálculos
   const feesIn   = paidList.reduce((s, name) => {
@@ -2691,7 +2663,7 @@ function finSendWA(){
   }
 
   if(pendList.length){
-    msg += `🔴 *Pendentes (${pendList.length}):* ${pendList.join(', ')}\n\n`;
+    msg += `🔴 *Pendentes (${pendList.length}):* ${pendList.map(p => p.months > 1 ? `${p.name} ⚠️${p.months}m` : p.name).join(', ')}\n\n`;
   }
 
   msg += `💰 Subtotal mensalidades: *${finFmt(feesIn)}*\n`;
@@ -2793,34 +2765,19 @@ function finSendCobranca(){
     return;
   }
 
-  const sep = '▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬';
-
   let msg = '';
-  msg += `⚽ *UNIÃO FIGUEIRA GRANDE*\n`;
-  msg += `${sep}\n`;
-  msg += `💳 *COBRANÇA DE MENSALIDADES*\n`;
-  msg += `📅 Competência: *${mLabel}*\n`;
-  msg += `📌 Valor unitário: *${finFmt(dfv)}*\n`;
-  msg += `${sep}\n\n`;
+  msg += `⚽ *UFG · Cobrança* — ${mLabel}\n`;
+  msg += `📌 Valor: *${finFmt(dfv)}*\n\n`;
 
-  msg += `✅ *Pagaram (${paidList.length}):*\n`;
-  msg += paidList.length ? paidList.map((n,i)=>`${i+1}. ${n}`).join('\n') : '_Ninguém ainda_';
+  msg += `✅ *Pagaram (${paidList.length}):* `;
+  msg += paidList.length ? paidList.join(', ') : '_Ninguém ainda_';
   msg += `\n\n`;
 
   msg += `🔴 *Pendentes (${pendList.length}):*\n`;
-  msg += pendList.map((p,i)=>{
-    const tag = p.months > 1 ? ` ⚠️ _(${p.months} meses em atraso)_` : '';
-    return `${i+1}. ${p.name}${tag}`;
-  }).join('\n');
+  msg += pendList.map(p => `• ${p.name}${p.months > 1 ? ` ⚠️${p.months}m` : ''}`).join('\n');
   msg += `\n\n`;
 
-  const atrasados = pendList.filter(p => p.months > 1).length;
-  if(atrasados > 0){
-    msg += `⚠️ *${atrasados} jogador(es) com mais de 1 mês em atraso.*\n\n`;
-  }
-
-  msg += `${sep}\n`;
-  msg += `_Quem ainda está pendente, por favor regularizar o quanto antes! 🙏_`;
+  msg += `_Por favor, regularizar o quanto antes! 🙏_`;
 
   navigator.clipboard.writeText(msg)
     .then(() => toast('✅ Cobrança copiada!'))
@@ -2857,11 +2814,9 @@ function renderTeams(teams){
 
 // ─── WHATSAPP — LISTA DE CONFIRMAÇÃO ───────────────────────────
 let _vagasModalConfirmados = 0;
-let _vagasModalNaovao = [];
 
 function sendConfirmationList(){
   const confirmados = players.filter(p=>p.present);
-  const declinados  = players.filter(p=>p.declined);
 
   // Sugestão inteligente: se ninguém confirmou ainda (1º envio da semana), sugere o
   // elenco inteiro (lista "em aberto"); se já há confirmados (reenvio/atualização),
@@ -2870,12 +2825,9 @@ function sendConfirmationList(){
   const sugestao = confirmados.length > 0 ? confirmados.length + 2 : elenco;
 
   _vagasModalConfirmados = confirmados.length;
-  _vagasModalNaovao      = declinados.map(p=>p.name);
 
   document.getElementById('vagas-modal-input').value = sugestao;
-  document.getElementById('vagas-modal-naovao-input').value = '';
   document.getElementById('vagas-modal-preview').style.display = 'none';
-  vagasModalRenderChips();
   vagasModalUpdateCounter();
   document.getElementById('vagas-modal-overlay').style.display = 'flex';
   setTimeout(()=>document.getElementById('vagas-modal-input').focus(), 50);
@@ -2910,32 +2862,6 @@ function vagasModalUpdateCounter(){
   vagasModalUpdatePreview();
 }
 
-// ── Chips "Quem não vai jogar" ──
-function vagasModalRenderChips(){
-  const box = document.getElementById('vagas-modal-naovao-chips');
-  box.innerHTML = _vagasModalNaovao.map((nome,i) =>
-    `<span class="chip">${nome}<button type="button" class="chip-x" onclick="vagasModalRemoveNaovao(${i})">✕</button></span>`
-  ).join('');
-}
-
-function vagasModalNaovaoKeydown(e){
-  if(e.key !== 'Enter' && e.key !== ',') return;
-  e.preventDefault();
-  const nome = e.target.value.trim().replace(/,$/,'');
-  if(nome && !_vagasModalNaovao.includes(nome)){
-    _vagasModalNaovao.push(nome);
-    vagasModalRenderChips();
-    vagasModalUpdatePreview();
-  }
-  e.target.value = '';
-}
-
-function vagasModalRemoveNaovao(i){
-  _vagasModalNaovao.splice(i,1);
-  vagasModalRenderChips();
-  vagasModalUpdatePreview();
-}
-
 // ── Pré-visualização da mensagem (reaproveita buildConfirmationMessage) ──
 function vagasModalTogglePreview(){
   const box = document.getElementById('vagas-modal-preview');
@@ -2948,18 +2874,18 @@ function vagasModalUpdatePreview(){
   const box = document.getElementById('vagas-modal-preview');
   if(box.style.display === 'none') return; // só recalcula se estiver aberta (evita trabalho à toa)
   const vagas = parseInt(document.getElementById('vagas-modal-input').value) || 0;
-  box.textContent = buildConfirmationMessage(vagas, _vagasModalNaovao);
+  box.textContent = buildConfirmationMessage(vagas);
 }
 
 function vagasModalOk(){
   const vagas = parseInt(document.getElementById('vagas-modal-input').value);
   if(!vagas || vagas<1){ toast('⚠️ Número de vagas inválido.'); return; }
   document.getElementById('vagas-modal-overlay').style.display = 'none';
-  buildAndSendConfirmationList(vagas, _vagasModalNaovao);
+  buildAndSendConfirmationList(vagas);
 }
 
 // Monta o texto da mensagem — usada tanto no envio quanto na pré-visualização.
-function buildConfirmationMessage(vagas, naoVao=[]){
+function buildConfirmationMessage(vagas){
   // Jogadores já confirmados na tela de presença
   const confirmados = players.filter(p=>p.present);
   const gks  = confirmados.filter(p=>p.isGK);   // só entram nas vagas 1-2 (reservadas p/ 🥅)
@@ -2968,8 +2894,7 @@ function buildConfirmationMessage(vagas, naoVao=[]){
   const outros = [...gks.slice(2), ...rest];     // demais confirmados (inclui goleiro extra, se houver)
 
   // Bloco monoespaçado (```) garante que a numeração não desalinhe no WhatsApp
-  let msg = `⚽ *RACHÃO UFG*\n📋 *LISTA DE CONFIRMAÇÃO*\n\n*Quem vai jogar?* Responda com seu nome na numeração disponível. 👇\n\n`;
-  msg += '✅ *Confirmados*\n';
+  let msg = `⚽ *RACHÃO UFG · Lista de Confirmação*\nResponda com seu nome na vaga disponível 👇\n\n`;
   msg += '```\n';
   for(let i=1;i<=vagas;i++){
     // Vagas 1-2: só preenche se houver goleiro confirmado; nunca usa jogador de linha
@@ -2978,22 +2903,15 @@ function buildConfirmationMessage(vagas, naoVao=[]){
   }
   msg += '```';
 
-  if(naoVao.length){
-    msg += '\n\n❌ *Não vão jogar*\n';
-    msg += '```\n';
-    naoVao.forEach((nome,idx)=>{ msg += `${String(idx+1).padStart(2,'0')}. ${nome}\n`; });
-    msg += '```';
-  }
-
-  msg += `\n\n⏰ *Confirme sua presença até o meio-dia do dia do jogo.*\n\nSe não puder comparecer, avise no grupo para facilitar a organização e o fechamento da lista.`;
+  msg += `\n\n⏰ Confirme até o meio-dia do jogo.`;
   return msg;
 }
 
-function buildAndSendConfirmationList(vagas, naoVao=[]){
+function buildAndSendConfirmationList(vagas){
   const confirmados = players.filter(p=>p.present);
   if(vagas < confirmados.length){ toast(`⚠️ ${confirmados.length} confirmados, mas só ${vagas} vagas.`); }
 
-  const msg = buildConfirmationMessage(vagas, naoVao);
+  const msg = buildConfirmationMessage(vagas);
 
   navigator.clipboard.writeText(msg).then(()=>toast('✅ Lista copiada!')).catch(()=>{
     const ta=document.createElement('textarea');
