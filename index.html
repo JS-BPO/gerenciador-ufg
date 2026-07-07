@@ -227,6 +227,16 @@ main {
   margin-bottom:8px;
 }
 
+/* ─── RESUMO DE CONFIRMADOS (acima do botão Enviar Lista) ──── */
+.confirm-summary {
+  font-size:11px;
+  color:var(--muted);
+  text-align:center;
+  margin-bottom:6px;
+  min-height:14px;
+}
+.confirm-summary b { color:var(--gold); font-weight:800; }
+
 /* ─── BUTTONS ────────────────────────────────────────────── */
 .btn {
   display:inline-flex;
@@ -1243,6 +1253,12 @@ textarea.wa-preview:focus { border-color:var(--gold); }
   margin:16px 0;
 }
 
+@keyframes ufgFadeIn {
+  from { opacity:0; transform:translateY(4px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.fade-in { animation: ufgFadeIn .18s ease; }
+
 @keyframes loginFadeDown {
   from { opacity:0; transform:translateY(-18px); }
   to   { opacity:1; transform:translateY(0); }
@@ -1251,6 +1267,33 @@ textarea.wa-preview:focus { border-color:var(--gold); }
   from { opacity:0; transform:translateY(18px); }
   to   { opacity:1; transform:translateY(0); }
 }
+
+/* ─── SYNC STATUS (indicador no header) ──────────────────── */
+.sync-status {
+  display:flex;
+  align-items:center;
+  gap:5px;
+  font-size:10px;
+  font-weight:700;
+  color:var(--muted);
+  letter-spacing:.02em;
+  flex-shrink:0;
+  text-transform:uppercase;
+}
+.sync-status .dot {
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:var(--muted2);
+  flex-shrink:0;
+  transition:background var(--trans);
+}
+.sync-status.synced  { color:#5fe88a; }
+.sync-status.synced  .dot { background:#3DBE6B; }
+.sync-status.syncing { color:var(--gold-dim); }
+.sync-status.syncing .dot { background:var(--gold); }
+.sync-status.error   { color:var(--red); }
+.sync-status.error   .dot { background:var(--red); }
 
 .logout-btn {
   margin-left:auto;
@@ -1365,6 +1408,9 @@ textarea.wa-preview:focus { border-color:var(--gold); }
       <div class="header-title">União Figueira Grande</div>
       <div class="header-sub">Gerenciador Oficial UFG</div>
     </div>
+    <span id="sync-status" class="sync-status offline" title="Status de sincronização com a nuvem">
+      <span class="dot"></span><span class="sync-label">offline</span>
+    </span>
     <button class="logout-btn" onclick="doLogout()" title="Sair">
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
     </button>
@@ -1402,6 +1448,7 @@ textarea.wa-preview:focus { border-color:var(--gold); }
     <div class="presence-grid" id="presence-list"></div>
 
     <div id="confirm-list-area" style="margin-top:10px;">
+      <div id="confirm-list-summary" class="confirm-summary"></div>
       <button class="btn btn-full wa-btn" onclick="sendConfirmationList()">📤 Enviar Lista de Confirmação p/ WhatsApp</button>
     </div>
 
@@ -1654,6 +1701,9 @@ textarea.wa-preview:focus { border-color:var(--gold); }
         👁️ Pré-visualizar mensagem
       </button>
       <div id="vagas-modal-preview" class="wa-preview" style="display:none"></div>
+      <button type="button" class="btn btn-ghost btn-sm" style="width:100%" onclick="vagasModalCopyOnly()">
+        📋 Copiar mensagem
+      </button>
     </div>
     <div class="fin-modal-actions" style="margin-top:16px">
       <button class="btn btn-gold" style="flex:1" onclick="vagasModalOk()">📤 Gerar Lista</button>
@@ -1671,6 +1721,9 @@ textarea.wa-preview:focus { border-color:var(--gold); }
       <textarea id="cobranca-modal-preview" class="wa-preview" rows="10" spellcheck="false"></textarea>
       <button type="button" class="btn btn-ghost btn-sm" style="width:100%" onclick="finCobrancaModalRestore()">
         ↩️ Restaurar texto original
+      </button>
+      <button type="button" class="btn btn-ghost btn-sm" style="width:100%" onclick="finCobrancaModalCopyOnly()">
+        📋 Copiar mensagem
       </button>
     </div>
     <div class="fin-modal-actions" style="margin-top:16px">
@@ -1729,6 +1782,7 @@ try{
 <script>
 // ─── DATA ────────────────────────────────────────────────────
 const KEY='ufg_rachao_v1';
+const UFG_VAGAS_KEY='ufg_last_vagas'; // lembra o nº de vagas do último envio, pra calcular "vagas livres"
 
 const TEAM_DEFS=[
   {label:'TIME VERDE',  dot:'#3DBE6B',bg:'rgba(61,190,107,.08)', text:'#5fe88a'},
@@ -1772,6 +1826,7 @@ function switchTab(tab,btn){
   if(tab==='game')renderPresence();
   if(tab==='roster')renderRoster();
   if(tab==='fin')renderFin();
+  fadeIn(document.getElementById('tab-'+tab));
 }
 
 
@@ -1782,7 +1837,9 @@ function renderPresence(){
     el.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="ico">👥</div>Nenhum jogador.</div>';
     updateStats(); return;
   }
-  const sorted=[...players].sort((a,b)=>a.name.localeCompare(b.name));
+  // Recusados sempre por último (agrupados), alfabética dentro de cada grupo — reduz ruído visual
+  const sorted=[...players].sort((a,b)=>
+    a.declined===b.declined ? a.name.localeCompare(b.name) : (a.declined?1:-1));
   el.innerHTML=sorted.map(p=>`
     <div class="presence-item ${p.present?'selected':''} ${p.fee==='pending'?'pending':''} ${p.declined?'declined':''}" onclick="toggleP(${p.id})">
       <div class="presence-check">${p.present?'✓':''}</div>
@@ -1797,18 +1854,20 @@ function renderPresence(){
 }
 
 function toggleP(id){
+  haptic();
   const p=players.find(x=>x.id===id);
   if(p){p.present=!p.present; if(p.present)p.declined=false; save(players);}
   renderPresence(); clearDraw();
 }
 
 function toggleDeclined(id){
+  haptic();
   const p=players.find(x=>x.id===id);
   if(p){p.declined=!p.declined; if(p.declined)p.present=false; save(players);}
   renderPresence(); clearDraw();
 }
 
-function selectAll(){players.forEach(p=>{p.present=true;p.declined=false;});save(players);renderPresence();clearDraw();}
+function selectAll(){haptic();players.forEach(p=>{p.present=true;p.declined=false;});save(players);renderPresence();clearDraw();}
 function clearSelection(){
   const temDados = players.some(p=>p.present||p.declined);
   if(!temDados) return; // nada marcado, não precisa confirmar
@@ -1816,6 +1875,7 @@ function clearSelection(){
     'Limpar lista?',
     'Isso vai apagar as presenças (✓) e recusas (✕) marcadas. Deseja continuar?',
     ()=>{
+      haptic();
       players.forEach(p=>{p.present=false;p.declined=false;});
       save(players); renderPresence(); clearDraw();
     }
@@ -1829,6 +1889,21 @@ function updateStats(){
   const declEl=document.getElementById('declined-count');
   declEl.textContent='✕ '+declined;
   declEl.style.display=declined?'inline-flex':'none';
+  updateConfirmSummary();
+}
+
+// Mostra "X confirmados" (ou "X confirmados · Y vagas livres" se já houver um envio anterior salvo)
+function updateConfirmSummary(){
+  const el = document.getElementById('confirm-list-summary');
+  if(!el) return;
+  const confirmados  = players.filter(p=>p.present).length;
+  const lastVagas    = parseInt(localStorage.getItem(UFG_VAGAS_KEY)) || 0;
+  if(lastVagas > 0){
+    const livres = Math.max(0, lastVagas - confirmados);
+    el.innerHTML = `<b>${confirmados}</b> confirmado${confirmados===1?'':'s'} · <b>${livres}</b> vaga${livres===1?'':'s'} livre${livres===1?'':'s'}`;
+  } else {
+    el.innerHTML = `<b>${confirmados}</b> confirmado${confirmados===1?'':'s'}`;
+  }
 }
 
 function clearDraw(){
@@ -1863,6 +1938,7 @@ function clearDraw(){
   7. Ordem interna embaralhada — GK sempre no topo.
 */
 function drawTeams(){
+  haptic();
   const present = players.filter(p => p.present);
   const n = parseInt(document.getElementById('num-teams').value);
   if(present.length < n){ toast('⚠️ Poucos jogadores para ' + n + ' times.'); return; }
@@ -2120,6 +2196,7 @@ function finNavMonth(dir){
   if(finMonth > 11){ finMonth = 0; finYear++; }
   if(finMonth < 0) { finMonth = 11; finYear--; }
   renderFin();
+  fadeIn(document.getElementById('tab-fin'));
 }
 
 // ─── FEE VALUE ────────────────────────────────────────────────
@@ -2841,6 +2918,18 @@ function finCobrancaModalCancel(e){
   document.getElementById('cobranca-modal-overlay').style.display = 'none';
 }
 
+// Copia a cobrança sem abrir o WhatsApp — útil pra revisar ou colar em outro app antes de enviar
+function finCobrancaModalCopyOnly(){
+  const msg = document.getElementById('cobranca-modal-preview').value.trim();
+  if(!msg){ toast('⚠️ A mensagem está vazia.'); return; }
+  navigator.clipboard.writeText(msg).then(()=>toast('✅ Cobrança copiada!')).catch(()=>{
+    const ta=document.createElement('textarea');
+    ta.value=msg;document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');document.body.removeChild(ta);
+    toast('✅ Cobrança copiada!');
+  });
+}
+
 // Confirmação no modal → copia o texto (com eventuais edições do usuário) e abre o WhatsApp
 function finCobrancaModalSend(){
   const msg = document.getElementById('cobranca-modal-preview').value.trim();
@@ -2887,6 +2976,7 @@ function renderTeams(teams){
 let _vagasModalConfirmados = 0;
 
 function sendConfirmationList(){
+  haptic();
   const confirmados = players.filter(p=>p.present);
 
   // Sugestão inteligente: se ninguém confirmou ainda (1º envio da semana), sugere o
@@ -2951,8 +3041,23 @@ function vagasModalUpdatePreview(){
 function vagasModalOk(){
   const vagas = parseInt(document.getElementById('vagas-modal-input').value);
   if(!vagas || vagas<1){ toast('⚠️ Número de vagas inválido.'); return; }
+  localStorage.setItem(UFG_VAGAS_KEY, vagas);
   document.getElementById('vagas-modal-overlay').style.display = 'none';
   buildAndSendConfirmationList(vagas);
+  updateConfirmSummary();
+}
+
+// Copia a mensagem sem abrir o WhatsApp — útil pra revisar ou colar em outro app antes de enviar
+function vagasModalCopyOnly(){
+  const vagas = parseInt(document.getElementById('vagas-modal-input').value);
+  if(!vagas || vagas<1){ toast('⚠️ Número de vagas inválido.'); return; }
+  const msg = buildConfirmationMessage(vagas);
+  navigator.clipboard.writeText(msg).then(()=>toast('✅ Mensagem copiada!')).catch(()=>{
+    const ta=document.createElement('textarea');
+    ta.value=msg;document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');document.body.removeChild(ta);
+    toast('✅ Mensagem copiada!');
+  });
 }
 
 // Monta o texto da mensagem — usada tanto no envio quanto na pré-visualização.
@@ -3012,6 +3117,7 @@ function buildAndSendConfirmationList(vagas){
 // ─── WHATSAPP ─────────────────────────────────────────────────
 function copyWA(){
   if(!lastDraw)return;
+  haptic();
   const n=players.filter(p=>p.present).length;
   let msg=`⚽ *RACHÃO UFG*\n👥 *${n} jogadores presentes*\n\n`;
   lastDraw.forEach((team,i)=>{
@@ -3190,6 +3296,23 @@ function toast(msg){
   toastT=setTimeout(()=>t.classList.remove('show'),2500);
 }
 
+// ─── FEEDBACK TÁTIL ─────────────────────────────────────────
+// Vibração curta em ações principais (✓/✕, sortear, enviar). Ignorado
+// silenciosamente em dispositivos/navegadores sem suporte (ex: iOS Safari).
+function haptic(){
+  if(navigator.vibrate) navigator.vibrate(10);
+}
+
+// ─── FADE-IN AO TROCAR DE ABA / MÊS ─────────────────────────
+// Reinicia a animação removendo e forçando reflow antes de reaplicar a classe —
+// necessário pois o navegador não reinicia @keyframes se a classe já estava presente.
+function fadeIn(el){
+  if(!el) return;
+  el.classList.remove('fade-in');
+  void el.offsetWidth;
+  el.classList.add('fade-in');
+}
+
 // ─── BACKUP / RESTAURAÇÃO ──────────────────────────────────────
 // Exporta todos os dados (elenco + financeiro) num único arquivo JSON.
 function backupExport(){
@@ -3267,8 +3390,21 @@ function fbPush(doc, data){
   if(!fbDB || !fbAuth.currentUser) return; // sem conexão/login na nuvem = segue só local, sem erro
   const ts = Date.now();
   _fbLastWriteTs[doc] = ts;
+  setSyncStatus('syncing');
   fbDB.collection('ufg').doc(doc).set({ data, updatedAt: ts })
-    .catch(err => console.warn('Firestore write ('+doc+'):', err.message));
+    .then(() => setSyncStatus('synced'))
+    .catch(err => { console.warn('Firestore write ('+doc+'):', err.message); setSyncStatus('error'); });
+}
+
+// Atualiza o indicador visual de sincronização no header.
+// Estados: 'synced' (🟢), 'syncing' (🟡), 'offline' (⚪), 'error' (🔴)
+const SYNC_LABELS = { synced:'sincronizado', syncing:'sincronizando…', offline:'offline', error:'erro de sync' };
+function setSyncStatus(state){
+  const el = document.getElementById('sync-status');
+  if(!el) return;
+  el.className = 'sync-status ' + state;
+  const label = el.querySelector('.sync-label');
+  if(label) label.textContent = SYNC_LABELS[state] || state;
 }
 
 function fbStartSync(){
@@ -3287,7 +3423,8 @@ function fbStartSync(){
     players = d.data;
     localStorage.setItem(KEY, JSON.stringify(players));
     renderPresence(); renderRoster(); syncFeeStatus();
-  }, err => console.warn('Firestore sync (players):', err.message));
+    setSyncStatus('synced');
+  }, err => { console.warn('Firestore sync (players):', err.message); setSyncStatus('error'); });
 
   // Financeiro — só sincroniza (lê) quando logado como admin
   if(currentRole === 'admin'){
@@ -3298,7 +3435,8 @@ function fbStartSync(){
       finData = d.data;
       localStorage.setItem(FIN_KEY, JSON.stringify(finData));
       renderFin();
-    }, err => console.warn('Firestore sync (finData):', err.message));
+      setSyncStatus('synced');
+    }, err => { console.warn('Firestore sync (finData):', err.message); setSyncStatus('error'); });
   }
 }
 
@@ -3321,6 +3459,7 @@ function fbMarkPresenceInteraction(){
 function fbStopSync(){
   if(_fbUnsubPlayers){ _fbUnsubPlayers(); _fbUnsubPlayers = null; }
   if(_fbUnsubFin){ _fbUnsubFin(); _fbUnsubFin = null; }
+  setSyncStatus('offline');
 }
 
 // Autentica no Firebase com o mesmo papel/senha já validados na tela de login.
