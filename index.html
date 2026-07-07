@@ -227,16 +227,6 @@ main {
   margin-bottom:8px;
 }
 
-/* ─── RESUMO DE CONFIRMADOS (acima do botão Enviar Lista) ──── */
-.confirm-summary {
-  font-size:11px;
-  color:var(--muted);
-  text-align:center;
-  margin-bottom:6px;
-  min-height:14px;
-}
-.confirm-summary b { color:var(--gold); font-weight:800; }
-
 /* ─── BUTTONS ────────────────────────────────────────────── */
 .btn {
   display:inline-flex;
@@ -1333,7 +1323,14 @@ textarea.wa-preview:focus { border-color:var(--gold); }
    "sincronizando…" etc.) espreme o header-title e some com a hierarquia
    visual. Mantemos só o dot (com tooltip) e liberamos espaço pro título. */
 @media(max-width:480px){
-  .sync-status{ gap:0; }
+  .sync-status{
+    gap:0;
+    /* padding cria: (1) respiro visual entre o título truncado e o dot,
+       evitando que "encostem"; (2) área de toque de ~24px (mínimo WCAG),
+       já que o dot visual sozinho (9px) é pequeno demais pra tocar bem */
+    padding:8px 6px 8px 10px;
+    margin-left:-6px; /* compensa o padding pra não empurrar o logout-btn */
+  }
   .sync-status .sync-label{
     position:absolute;
     width:1px; height:1px;
@@ -1344,6 +1341,12 @@ textarea.wa-preview:focus { border-color:var(--gold); }
     border:0;
   }
   .sync-status .dot{ width:9px; height:9px; }
+
+  /* Logo um pouco menor + letter-spacing mais compacto no título:
+     juntos liberam espaço suficiente pra caber "União Figueira Grande"
+     por completo, sem cortar em reticências no mobile. */
+  .logo-wrap, #logo-img{ width:48px; height:48px; }
+  .header-title{ letter-spacing:.05em; }
 }
 @media(max-width:360px){
   .header-bar{ gap:8px; padding:8px 10px; }
@@ -1479,7 +1482,6 @@ textarea.wa-preview:focus { border-color:var(--gold); }
     <div class="presence-grid" id="presence-list"></div>
 
     <div id="confirm-list-area" style="margin-top:10px;">
-      <div id="confirm-list-summary" class="confirm-summary"></div>
       <button class="btn btn-full wa-btn" onclick="sendConfirmationList()">📤 Enviar Lista de Confirmação p/ WhatsApp</button>
     </div>
 
@@ -1813,7 +1815,6 @@ try{
 <script>
 // ─── DATA ────────────────────────────────────────────────────
 const KEY='ufg_rachao_v1';
-const UFG_VAGAS_KEY='ufg_last_vagas'; // lembra o nº de vagas do último envio, pra calcular "vagas livres"
 
 const TEAM_DEFS=[
   {label:'TIME VERDE',  dot:'#3DBE6B',bg:'rgba(61,190,107,.08)', text:'#5fe88a'},
@@ -1920,21 +1921,6 @@ function updateStats(){
   const declEl=document.getElementById('declined-count');
   declEl.textContent='✕ '+declined;
   declEl.style.display=declined?'inline-flex':'none';
-  updateConfirmSummary();
-}
-
-// Mostra "X confirmados" (ou "X confirmados · Y vagas livres" se já houver um envio anterior salvo)
-function updateConfirmSummary(){
-  const el = document.getElementById('confirm-list-summary');
-  if(!el) return;
-  const confirmados  = players.filter(p=>p.present).length;
-  const lastVagas    = parseInt(localStorage.getItem(UFG_VAGAS_KEY)) || 0;
-  if(lastVagas > 0){
-    const livres = Math.max(0, lastVagas - confirmados);
-    el.innerHTML = `<b>${confirmados}</b> confirmado${confirmados===1?'':'s'} · <b>${livres}</b> vaga${livres===1?'':'s'} livre${livres===1?'':'s'}`;
-  } else {
-    el.innerHTML = `<b>${confirmados}</b> confirmado${confirmados===1?'':'s'}`;
-  }
 }
 
 function clearDraw(){
@@ -3072,10 +3058,8 @@ function vagasModalUpdatePreview(){
 function vagasModalOk(){
   const vagas = parseInt(document.getElementById('vagas-modal-input').value);
   if(!vagas || vagas<1){ toast('⚠️ Número de vagas inválido.'); return; }
-  localStorage.setItem(UFG_VAGAS_KEY, vagas);
   document.getElementById('vagas-modal-overlay').style.display = 'none';
   buildAndSendConfirmationList(vagas);
-  updateConfirmSummary();
 }
 
 // Copia a mensagem sem abrir o WhatsApp — útil pra revisar ou colar em outro app antes de enviar
