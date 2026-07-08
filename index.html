@@ -1369,6 +1369,7 @@ textarea.wa-preview:focus { border-color:var(--gold); }
 
 /* Jogador: pode VER quem está pendente (legenda + indicador), mas não pode EDITAR valores/mensalidades */
 .player-mode-ro #ep-fee-wrap { display:none !important; }
+.player-mode-ro #ep-joined-wrap { display:none !important; }
 
 .player-mode-ro .presence-item.selected.pending {
   border-color:var(--gold);
@@ -1695,6 +1696,12 @@ textarea.wa-preview:focus { border-color:var(--gold); }
       <div class="fin-modal-field" id="ep-fee-wrap">
         <label>Mensalidade individual (R$) <span style="color:var(--muted);font-weight:400">— em branco = valor padrão do mês</span></label>
         <input class="input-txt" id="ep-fee" type="number" min="0" step="0.01" placeholder="Valor padrão">
+      </div>
+      <div class="fin-modal-field" id="ep-joined-wrap">
+        <label>Mês de ingresso <span style="color:var(--muted);font-weight:400">— em branco = elenco histórico (sempre ativo)</span></label>
+        <input class="input-txt" id="ep-joined" type="month">
+        <button type="button" class="btn btn-ghost" style="margin-top:6px;width:100%;font-size:12px"
+          onclick="document.getElementById('ep-joined').value=''">🗑️ Limpar (tratar como histórico)</button>
       </div>
       <div class="fin-modal-field">
         <label>Nível / Posição</label>
@@ -2195,6 +2202,17 @@ const WA_BRAND_HEADER = '⚽ *Rachão de Sexta - UFG*';
 
 function finKey(y, m){ return `${y}-${m}`; }
 
+// ─── TEMPO DE CASA (mês de ingresso do jogador) ────────────────
+// Um jogador só é considerado "ativo" (e, portanto, cobrável) a partir do
+// mês/ano em que entrou (p.joinedY / p.joinedM). Jogadores sem esses campos
+// preenchidos (elenco histórico, cadastrado antes desta feature) são
+// tratados como sempre ativos, para não alterar o histórico já registrado.
+function finMonthIdx(y, m){ return y*12 + m; }
+function finPlayerActiveIn(p, y, m){
+  if(p.joinedY == null || p.joinedM == null) return true;
+  return finMonthIdx(y, m) >= finMonthIdx(p.joinedY, p.joinedM);
+}
+
 function finMonthData(){
   const k = finKey(finYear, finMonth);
   if(!finData.months[k]){
@@ -2425,7 +2443,10 @@ function renderFinFeeGrid(){
   const grid = document.getElementById('fin-fee-grid');
 
   // Exclude guests from mensalidades — they go to recv section
-  const sorted = [...players].filter(p => !p.isGuest).sort((a,b)=>a.name.localeCompare(b.name));
+  // Exclude players who joined AFTER this month — não devem aparecer como devedores no passado
+  const sorted = [...players]
+    .filter(p => !p.isGuest && finPlayerActiveIn(p, finYear, finMonth))
+    .sort((a,b)=>a.name.localeCompare(b.name));
 
   // ── Indicador de adimplência ──
   const statsEl = document.getElementById('fin-fee-stats');
@@ -2749,7 +2770,7 @@ function finSendWA(){
     return !(p && p.isGuest);
   });
   const pendList = players
-    .filter(p => !p.isGuest && !md.paid.includes(p.name))
+    .filter(p => !p.isGuest && finPlayerActiveIn(p, finYear, finMonth) && !md.paid.includes(p.name))
     .map(p => ({ name: p.name, months: finMonthsOwed(p.name) }));
 
   // Cálculos
@@ -2858,8 +2879,10 @@ function finSendWA(){
 // Conta quantos meses consecutivos (incluindo o atual) o jogador está devendo.
 // Para a contagem ao encontrar um mês pago ou um mês sem registro (fora do período controlado).
 function finMonthsOwed(name){
+  const player = players.find(x => x.name === name);
   let y = finYear, m = finMonth, count = 0;
   while(true){
+    if(player && !finPlayerActiveIn(player, y, m)) break; // não cobra meses anteriores ao ingresso
     const k  = finKey(y, m);
     const md = finData.months[k];
     if(!md) break;
@@ -2894,7 +2917,7 @@ function finSendCobranca(){
     .map(p => p.name)
     .sort((a,b)=>a.localeCompare(b));
   const pendList = players
-    .filter(p => !p.isGuest && !md.paid.includes(p.name))
+    .filter(p => !p.isGuest && finPlayerActiveIn(p, finYear, finMonth) && !md.paid.includes(p.name))
     .map(p => p.name)
     .sort((a,b)=>a.localeCompare(b))
     .map(name => ({ name, months: finMonthsOwed(name) }));
@@ -3202,6 +3225,8 @@ function openEditPlayer(id){
   document.getElementById('ep-name').value  = p.name;
   document.getElementById('ep-level').value = playerLevelVal(p);
   document.getElementById('ep-fee').value    = p.customFee != null ? p.customFee : '';
+  document.getElementById('ep-joined').value = (p.joinedY != null && p.joinedM != null)
+    ? `${p.joinedY}-${String(p.joinedM+1).padStart(2,'0')}` : '';
   epLevelChange(playerLevelVal(p));
   document.getElementById('ep-modal-overlay').style.display = 'flex';
   setTimeout(() => document.getElementById('ep-name').focus(), 100);
@@ -3215,6 +3240,8 @@ function closeEditPlayer(){
 function epLevelChange(val){
   const feeWrap = document.getElementById('ep-fee-wrap');
   if(feeWrap) feeWrap.style.display = val === 'guest' ? 'none' : '';
+  const joinedWrap = document.getElementById('ep-joined-wrap');
+  if(joinedWrap) joinedWrap.style.display = val === 'guest' ? 'none' : '';
 }
 
 function saveEditPlayer(){
@@ -3235,6 +3262,16 @@ function saveEditPlayer(){
   p.isGK      = lvl === 'gk';
   p.stars     = (lvl === 'gk' || lvl === 'guest') ? 1 : parseInt(lvl);
   p.customFee = (!p.isGuest && !isNaN(fee) && fee > 0) ? fee : null;
+
+  const joinedVal = document.getElementById('ep-joined').value; // formato "AAAA-MM" ou ""
+  if(joinedVal){
+    const [jy, jm] = joinedVal.split('-').map(Number);
+    p.joinedY = jy;
+    p.joinedM = jm - 1; // input é 1-indexado, sistema usa 0-indexado
+  } else {
+    p.joinedY = null;
+    p.joinedM = null;
+  }
   save(players);
 
   // ── Sincronizar Financeiro ──────────────────────────────────
@@ -3297,7 +3334,8 @@ function addPlayer(){
   const name=inp.value.trim();
   if(!name){toast('⚠️ Digite um nome.');return;}
   if(players.some(p=>p.name.toLowerCase()===name.toLowerCase())){toast('⚠️ Já cadastrado.');return;}
-  players.push({id:Date.now(),name,stars:1,isGK:false,isGuest:false,fee:'ok',present:false,declined:false,customFee:null});
+  const now = new Date();
+  players.push({id:Date.now(),name,stars:1,isGK:false,isGuest:false,fee:'ok',present:false,declined:false,customFee:null,joinedY:now.getFullYear(),joinedM:now.getMonth()});
   save(players);inp.value='';renderRoster();
   toast('✅ '+name+' adicionado!');
 }
