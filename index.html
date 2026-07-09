@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Gerenciador UFG</title>
+
+<!-- ═══ PWA — instalação como app ═══════════════════════════ -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#111111">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gerenciador UFG">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
 <style>
 /* ─── DESIGN TOKENS ───────────────────────────────────────── */
 :root {
@@ -1319,6 +1331,29 @@ textarea.wa-preview:focus { border-color:var(--gold); }
 }
 .logout-btn:active { transform:translateY(0); }
 
+/* Botão "Instalar App" — mesmo padrão visual do logout-btn, em dourado */
+.install-btn {
+  flex-shrink:0;
+  width:32px;
+  height:32px;
+  display:none; /* JS libera quando o navegador permite instalar */
+  align-items:center;
+  justify-content:center;
+  background:rgba(212,175,55,.07);
+  border:1px solid rgba(212,175,55,.3);
+  border-radius:50%;
+  color:var(--gold);
+  cursor:pointer;
+  transition:background var(--trans), border-color var(--trans), color var(--trans), transform var(--trans);
+}
+.install-btn.show { display:flex; }
+.install-btn:hover {
+  background:rgba(212,175,55,.18);
+  border-color:rgba(212,175,55,.6);
+  transform:translateY(-1px);
+}
+.install-btn:active { transform:translateY(0); }
+
 /* Em telas estreitas, o rótulo textual do sync-status ("sincronizado",
    "sincronizando…" etc.) espreme o header-title e some com a hierarquia
    visual. Mantemos só o dot (com tooltip) e liberamos espaço pro título. */
@@ -1446,6 +1481,9 @@ textarea.wa-preview:focus { border-color:var(--gold); }
     <span id="sync-status" class="sync-status offline" title="Status de sincronização com a nuvem" role="button" tabindex="0" aria-label="Ver status de sincronização">
       <span class="dot"></span><span class="sync-label">offline</span>
     </span>
+    <button id="install-btn" class="install-btn" onclick="installApp()" title="Instalar aplicativo">
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    </button>
     <button class="logout-btn" onclick="doLogout()" title="Sair">
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
     </button>
@@ -3641,6 +3679,52 @@ function showApp(){
   // Copy logo to login screen
   document.getElementById('login-logo-img').src = document.getElementById('logo-img').src;
 })();
+
+// ═══ PWA — Service Worker + botão "Instalar App" ═══════════
+let deferredInstallPrompt = null;
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(err => {
+      console.warn('Falha ao registrar service worker:', err);
+    });
+  });
+}
+
+// Se já estiver instalado (rodando em modo standalone), nunca mostra o botão
+function isRunningAsInstalledApp(){
+  return window.matchMedia('(display-mode: standalone)').matches ||
+         window.navigator.standalone === true; // iOS
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  if(!isRunningAsInstalledApp()){
+    document.getElementById('install-btn').classList.add('show');
+  }
+});
+
+async function installApp(){
+  const btn = document.getElementById('install-btn');
+  if(!deferredInstallPrompt){
+    // Sem prompt nativo disponível (ex: iOS/Safari) — orienta manualmente
+    alert('Para instalar: toque no menu do navegador e escolha "Adicionar à tela de início" (ou "Instalar app").');
+    return;
+  }
+  btn.disabled = true;
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  btn.classList.remove('show');
+  btn.disabled = false;
+}
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  const btn = document.getElementById('install-btn');
+  if(btn) btn.classList.remove('show');
+});
 
 </script>
 
