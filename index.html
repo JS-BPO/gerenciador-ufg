@@ -3105,7 +3105,7 @@ function buildConfirmationMessage(vagas){
   const gks  = confirmados.filter(p=>p.isGK);   // só entram nas vagas 1-2 (reservadas p/ 🥅)
   const rest = confirmados.filter(p=>!p.isGK);
   const gksReservados = gks.slice(0,2);          // no máx. 2 vagas de goleiro na lista
-  const outros = [...gks.slice(2), ...rest];     // demais confirmados (inclui goleiro extra, se houver)
+  const outros = [...gks.slice(2), ...rest].sort((a,b)=>a.name.localeCompare(b.name));     // demais confirmados (inclui goleiro extra, se houver), ordenados alfabeticamente
 
   // Quem marcou "não vai jogar" na tela de presença
   const declinados = players.filter(p=>p.declined).map(p=>p.name).sort((a,b)=>a.localeCompare(b));
