@@ -3019,11 +3019,11 @@ function sendConfirmationList(){
   haptic();
   const confirmados = players.filter(p=>p.present);
 
-  // Sugestão inteligente: se ninguém confirmou ainda (1º envio da semana), sugere o
-  // elenco inteiro (lista "em aberto"); se já há confirmados (reenvio/atualização),
-  // sugere confirmados + 2 vagas de folga para imprevistos.
-  const elenco   = players.filter(p=>!p.isGuest).length || players.length || 16;
-  const sugestao = confirmados.length > 0 ? confirmados.length + 2 : elenco;
+  // Sugestão: número padrão do jogo é 14 vagas — sempre pré-preenche 14, e só
+  // cresce automaticamente se já houver mais confirmados que isso (nunca sugere
+  // menos que o total de confirmados). Continua editável no stepper.
+  const VAGAS_PADRAO = 14;
+  const sugestao = Math.max(VAGAS_PADRAO, confirmados.length);
 
   _vagasModalConfirmados = confirmados.length;
 
@@ -3145,7 +3145,7 @@ function buildConfirmationMessage(vagas){
     msg += '```';
   }
 
-  msg += `\n\n*⏰ Confirme sua presença até o meio-dia do dia do jogo.\n\nSe não puder comparecer, avise no grupo para facilitar a organização e o fechamento da lista.*`;
+  msg += `\n\n*⏰ Confirme sua presença até o meio-dia do dia do jogo.*\n\n*Se não puder comparecer, avise no grupo para facilitar a organização e o fechamento da lista.*`;
   return msg;
 }
 
