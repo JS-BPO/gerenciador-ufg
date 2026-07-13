@@ -168,6 +168,7 @@ header::after {
 }
 
 .tab-btn {
+  position:relative;
   flex:1;
   padding:10px 6px;
   background:none;
@@ -187,6 +188,25 @@ header::after {
 .tab-btn.active {
   color:var(--gold);
   border-bottom-color:var(--gold);
+}
+
+/* Badge de alerta — nº de pendências urgentes (mensalidade do mês + convidados vencidos) */
+.tab-badge {
+  position:absolute;
+  top:3px;
+  right:2px;
+  min-width:15px;
+  height:15px;
+  padding:0 4px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--red);
+  color:#fff;
+  font-size:9px;
+  font-weight:900;
+  border-radius:20px;
+  line-height:1;
 }
 
 /* ─── MAIN ───────────────────────────────────────────────── */
@@ -858,6 +878,10 @@ textarea.wa-preview:focus { border-color:var(--gold); }
   border-color:rgba(212,175,55,.5);
   background:rgba(212,175,55,.05);
 }
+.fin-recv-item.recv-overdue {
+  border-color:var(--red);
+  background:rgba(224,82,82,.08);
+}
 .fin-recv-check {
   width:18px; height:18px;
   border:2px solid var(--muted2);
@@ -871,10 +895,14 @@ textarea.wa-preview:focus { border-color:var(--gold); }
 .fin-recv-item.recv-pending .fin-recv-check {
   background:rgba(212,175,55,.2); border-color:var(--gold-dim); color:var(--gold);
 }
+.fin-recv-item.recv-overdue .fin-recv-check {
+  background:rgba(224,82,82,.2); border-color:var(--red); color:var(--red);
+}
 .fin-recv-name { flex:1; font-size:12px; font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .fin-recv-amt  { font-size:11px; font-weight:800; white-space:nowrap; }
 .fin-recv-item.recv-paid    .fin-recv-amt { color:#3DBE6B; }
 .fin-recv-item.recv-pending .fin-recv-amt { color:var(--gold); }
+.fin-recv-item.recv-overdue .fin-recv-amt { color:var(--red); font-weight:900; }
 .fin-recv-del { background:none; border:none; color:var(--muted2); font-size:15px; cursor:pointer; padding:0 2px; line-height:1; }
 .fin-recv-del:hover { color:var(--red); }
 
@@ -951,6 +979,18 @@ textarea.wa-preview:focus { border-color:var(--gold); }
   color:var(--muted);
   margin-bottom:5px;
 }
+.fin-pending-summary {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 12px;
+  margin-bottom:10px;
+  border-radius:var(--radius-sm);
+  border:1.5px solid var(--red);
+  background:rgba(224,82,82,.08);
+}
+.fin-pending-summary .ico { font-size:16px; flex-shrink:0; }
+.fin-pending-summary .txt { font-size:12px; font-weight:700; color:var(--red); line-height:1.4; }
 .fin-bal-val {
   font-size:20px;
   font-weight:900;
@@ -1459,7 +1499,7 @@ textarea.wa-preview:focus { border-color:var(--gold); }
 <div class="tabs" style="top:57px;">
   <button class="tab-btn active" onclick="switchTab('game',this)">📅 Dia de Jogo</button>
   <button class="tab-btn" onclick="switchTab('roster',this)">🗂️ Elenco</button>
-  <button class="tab-btn" onclick="switchTab('fin',this)">💰 Financeiro</button>
+  <button class="tab-btn" onclick="switchTab('fin',this)">💰 Financeiro<span class="tab-badge" id="fin-tab-badge" style="display:none">0</span></button>
 </div>
 
 <!-- ═══ MAIN ══════════════════════════════════════════════ -->
@@ -1541,6 +1581,9 @@ textarea.wa-preview:focus { border-color:var(--gold); }
         <div class="fin-bal-val" id="fin-bal-total">R$ 0,00</div>
       </div>
     </div>
+
+    <!-- ── RESUMO DE PENDÊNCIAS DO MÊS EM EXIBIÇÃO (só aparece se houver algo em aberto) ── -->
+    <div class="fin-pending-summary" id="fin-pending-summary" style="display:none"></div>
 
     <!-- ── KPIs: Entradas / Saídas / Saldo do Mês ── -->
     <div class="fin-kpi-row">
@@ -2359,10 +2402,12 @@ function renderFin(){
     MONTHS[finMonth] + ' ' + finYear;
 
   renderFinKPIs();
+  renderFinPendingSummary();
   renderFinFeeGrid();
   renderFinRecv();
   renderFinExpenses();
   renderFinAnnual();
+  finUpdateTabBadge();
 
   // Keep fee input in sync
   document.getElementById('fin-fee-val').value = finMonthData().feeValue||15;
@@ -2382,6 +2427,47 @@ function finPopulateCatSelect(id, selected){
 // Ausência do campo `paid` = pago (compatibilidade com dados antigos, que
 // não tinham essa distinção). Novas despesas nascem com paid:false (provisão).
 function finIsExpPaid(e){ return e.paid !== false; }
+
+// Um convidado/avulso é considerado "vencido" quando o mês em que foi lançado
+// já passou (virada de mês) e ele continua sem pagamento marcado.
+function finIsPastMonth(y, m){
+  const now = new Date();
+  return (y < now.getFullYear()) || (y === now.getFullYear() && m < now.getMonth());
+}
+
+// Total de pendências urgentes, independente do mês que está sendo navegado na tela:
+// mensalidades do mês REAL ainda não pagas + convidados/avulsos vencidos em qualquer mês encerrado.
+function finPendingBadgeCount(){
+  const now    = new Date();
+  const nowY   = now.getFullYear();
+  const nowM   = now.getMonth();
+  const curMd  = finData.months[finKey(nowY, nowM)];
+  let count = 0;
+
+  if(curMd){
+    count += players.filter(p =>
+      !p.isGuest && finPlayerActiveIn(p, nowY, nowM) && !curMd.paid.includes(p.name)
+    ).length;
+  }
+
+  Object.keys(finData.months).forEach(k => {
+    const [y, m] = k.split('-').map(Number);
+    if(!finIsPastMonth(y, m)) return;
+    const md = finData.months[k];
+    if(md && md.recvs) count += md.recvs.filter(r => !r.paid).length;
+  });
+
+  return count;
+}
+
+// Atualiza o badge vermelho no botão da aba Financeiro
+function finUpdateTabBadge(){
+  const badge = document.getElementById('fin-tab-badge');
+  if(!badge) return;
+  const count = finPendingBadgeCount();
+  badge.textContent = count > 99 ? '99+' : count;
+  badge.style.display = count > 0 ? 'flex' : 'none';
+}
 
 function finCalcMonthBalance(k){
   const md  = finData.months[k];
@@ -2435,6 +2521,38 @@ function renderFinKPIs(){
 
 function playerFee(p, defaultFee){
   return (p.customFee != null && p.customFee > 0) ? p.customFee : (defaultFee||15);
+}
+
+// Resumo consolidado de pendências do mês em exibição (mensalidades + convidados/avulsos).
+// Só aparece quando há algo em aberto — some sozinho quando tudo estiver pago.
+function renderFinPendingSummary(){
+  const el = document.getElementById('fin-pending-summary');
+  if(!el) return;
+
+  const md  = finMonthData();
+  const dfv = md.feeValue || 15;
+
+  const feePend = players.filter(p =>
+    !p.isGuest && finPlayerActiveIn(p, finYear, finMonth) && !md.paid.includes(p.name)
+  );
+  const feePendVal = feePend.reduce((s,p) => s + playerFee(p, dfv), 0);
+
+  const recvPend    = (md.recvs||[]).filter(r => !r.paid);
+  const recvPendVal = recvPend.reduce((s,r) => s + r.val, 0);
+  const overdue     = finIsPastMonth(finYear, finMonth);
+
+  const totalCount = feePend.length + recvPend.length;
+  if(!totalCount){
+    el.style.display = 'none';
+    return;
+  }
+
+  const parts = [];
+  if(feePend.length)  parts.push(`${feePend.length} jogador${feePend.length>1?'es':''}`);
+  if(recvPend.length) parts.push(`${recvPend.length} convidado${recvPend.length>1?'s':''}${overdue?` vencido${recvPend.length>1?'s':''}`:''}`);
+
+  el.innerHTML = `<span class="ico">⚠️</span><span class="txt">${finFmt(feePendVal + recvPendVal)} a receber — ${parts.join(' + ')}</span>`;
+  el.style.display = 'flex';
 }
 
 function renderFinFeeGrid(){
@@ -2511,10 +2629,20 @@ function renderFinRecv(){
     el.innerHTML = '<div class="empty"><div class="ico">🤝</div>Nenhum convidado registrado este mês.</div>';
     return;
   }
-  el.innerHTML = md.recvs.map(r => {
-    const cls  = r.paid ? 'recv-paid' : 'recv-pending';
-    const icon = r.paid ? '✓' : '⏳';
-    const lbl  = r.paid ? finFmt(r.val) : `${finFmt(r.val)} pendente`;
+  const overdue = finIsPastMonth(finYear, finMonth); // true só se o mês exibido já virou
+
+  // Ordena por urgência (vencido → pendente → pago); dentro do mesmo status, por nome
+  const statusRank = r => r.paid ? 2 : (overdue ? 0 : 1);
+  const sorted = [...md.recvs].sort((a,b) => {
+    const ra = statusRank(a), rb = statusRank(b);
+    return ra !== rb ? ra - rb : a.name.localeCompare(b.name);
+  });
+
+  el.innerHTML = sorted.map(r => {
+    const isOverdue = !r.paid && overdue;
+    const cls  = r.paid ? 'recv-paid' : (isOverdue ? 'recv-overdue' : 'recv-pending');
+    const icon = r.paid ? '✓' : (isOverdue ? '⚠️' : '⏳');
+    const lbl  = r.paid ? finFmt(r.val) : (isOverdue ? `${finFmt(r.val)} vencido` : `${finFmt(r.val)} pendente`);
     return `<div class="fin-recv-item ${cls}" onclick="finToggleRecv(${r.id})">
       <div class="fin-recv-check">${icon}</div>
       <span class="fin-recv-name">${r.name}</span>
@@ -2922,7 +3050,13 @@ function finSendCobranca(){
     .sort((a,b)=>a.localeCompare(b))
     .map(name => ({ name, months: finMonthsOwed(name) }));
 
-  if(!pendList.length){
+  // Convidados/avulsos ainda não pagos neste mês — "vencido" se o mês já virou
+  const recvOverdue = finIsPastMonth(finYear, finMonth);
+  const recvPend = (md.recvs||[])
+    .filter(r => !r.paid)
+    .sort((a,b)=>a.name.localeCompare(b.name));
+
+  if(!pendList.length && !recvPend.length){
     toast('✅ Ninguém está pendente este mês!');
     return;
   }
@@ -2936,9 +3070,18 @@ function finSendCobranca(){
   msg += `\n\n`;
 
   msg += `🔴 *Ainda faltam (${pendList.length}):*\n`;
-  msg += pendList.map(p => `• ${p.name}${p.months > 1 ? ` ⚠️${p.months}m` : ''}`).join('\n');
-  msg += `\n\n`;
+  msg += pendList.length
+    ? pendList.map(p => `• ${p.name}${p.months > 1 ? ` ⚠️${p.months}m` : ''}`).join('\n')
+    : '_Ninguém_';
 
+  if(recvPend.length){
+    const label = recvOverdue ? 'vencidos' : 'pendentes';
+    const icon  = recvOverdue ? '⚠️' : '🤝';
+    msg += `\n\n${icon} *Convidados/avulsos ${label} (${recvPend.length}):*\n`;
+    msg += recvPend.map(r => `• ${r.name} — ${finFmt(r.val)}`).join('\n');
+  }
+
+  msg += `\n\n`;
   msg += `Contamos com vocês! Bora deixar em dia pra seguirmos jogando tranquilos! 🥅💰`;
 
   _cobrancaModalMsg = msg; // guarda o texto original, útil se no futuro quisermos um botão "restaurar"
