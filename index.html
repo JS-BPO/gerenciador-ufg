@@ -1452,8 +1452,8 @@ textarea.wa-preview:focus { border-color:var(--gold); }
     <div class="login-card-title">🛡️ Acesso ao Gerenciador UFG</div>
 
     <div class="login-roles">
-      <button class="login-role-btn active" id="role-admin-btn" onclick="selectRole('admin')">⚙️ Administrador</button>
-      <button class="login-role-btn" id="role-player-btn" onclick="selectRole('player')">⚽ Jogador</button>
+      <button class="login-role-btn" id="role-admin-btn" onclick="selectRole('admin')">⚙️ Administrador</button>
+      <button class="login-role-btn active" id="role-player-btn" onclick="selectRole('player')">⚽ Jogador</button>
     </div>
 
     <div class="login-divider"></div>
@@ -1780,6 +1780,10 @@ textarea.wa-preview:focus { border-color:var(--gold); }
         </div>
         <div id="vagas-modal-counter" class="vagas-counter"></div>
       </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
+        <input type="checkbox" id="vagas-modal-incluir-pendentes" onchange="vagasModalUpdatePreview()">
+        🔔 Incluir lembrete de quem não respondeu
+      </label>
       <button type="button" class="btn btn-ghost btn-sm" style="width:100%" onclick="vagasModalTogglePreview()">
         👁️ Pré-visualizar mensagem
       </button>
@@ -2242,6 +2246,15 @@ let finMonth  = new Date().getMonth(); // 0-indexed
 // fechamento e lista de confirmação). Centralizado aqui para não precisar
 // atualizar em 3 lugares se o nome do grupo mudar.
 const WA_BRAND_HEADER = '⚽ *Rachão de Sexta - UFG*';
+
+// Dia da semana em que os jogos acontecem (0=dom ... 5=sex ... 6=sáb).
+// Usado para decidir, por padrão, quando o lembrete de "não responderam"
+// deve entrar na Lista de Confirmação (ver buildConfirmationMessage).
+const GAME_WEEKDAY = 5; // sexta-feira
+
+function isGameDay(date = new Date()){
+  return date.getDay() === GAME_WEEKDAY;
+}
 
 function finKey(y, m){ return `${y}-${m}`; }
 
@@ -3172,6 +3185,7 @@ function sendConfirmationList(){
 
   document.getElementById('vagas-modal-input').value = sugestao;
   document.getElementById('vagas-modal-preview').style.display = 'none';
+  document.getElementById('vagas-modal-incluir-pendentes').checked = isGameDay();
   vagasModalUpdateCounter();
   document.getElementById('vagas-modal-overlay').style.display = 'flex';
   setTimeout(()=>document.getElementById('vagas-modal-input').focus(), 50);
@@ -3206,6 +3220,13 @@ function vagasModalUpdateCounter(){
   vagasModalUpdatePreview();
 }
 
+// Lê o estado do checkbox "Incluir lembrete de quem não respondeu".
+// Fallback pro padrão (dia do jogo) caso o elemento não exista por algum motivo.
+function vagasModalIncluirPendentes(){
+  const el = document.getElementById('vagas-modal-incluir-pendentes');
+  return el ? el.checked : isGameDay();
+}
+
 // ── Pré-visualização da mensagem (reaproveita buildConfirmationMessage) ──
 function vagasModalTogglePreview(){
   const box = document.getElementById('vagas-modal-preview');
@@ -3218,21 +3239,21 @@ function vagasModalUpdatePreview(){
   const box = document.getElementById('vagas-modal-preview');
   if(box.style.display === 'none') return; // só recalcula se estiver aberta (evita trabalho à toa)
   const vagas = parseInt(document.getElementById('vagas-modal-input').value) || 0;
-  box.textContent = buildConfirmationMessage(vagas);
+  box.textContent = buildConfirmationMessage(vagas, vagasModalIncluirPendentes());
 }
 
 function vagasModalOk(){
   const vagas = parseInt(document.getElementById('vagas-modal-input').value);
   if(!vagas || vagas<1){ toast('⚠️ Número de vagas inválido.'); return; }
   document.getElementById('vagas-modal-overlay').style.display = 'none';
-  buildAndSendConfirmationList(vagas);
+  buildAndSendConfirmationList(vagas, vagasModalIncluirPendentes());
 }
 
 // Copia a mensagem sem abrir o WhatsApp — útil pra revisar ou colar em outro app antes de enviar
 function vagasModalCopyOnly(){
   const vagas = parseInt(document.getElementById('vagas-modal-input').value);
   if(!vagas || vagas<1){ toast('⚠️ Número de vagas inválido.'); return; }
-  const msg = buildConfirmationMessage(vagas);
+  const msg = buildConfirmationMessage(vagas, vagasModalIncluirPendentes());
   navigator.clipboard.writeText(msg).then(()=>toast('✅ Mensagem copiada!')).catch(()=>{
     const ta=document.createElement('textarea');
     ta.value=msg;document.body.appendChild(ta);ta.select();
@@ -3242,7 +3263,7 @@ function vagasModalCopyOnly(){
 }
 
 // Monta o texto da mensagem — usada tanto no envio quanto na pré-visualização.
-function buildConfirmationMessage(vagas){
+function buildConfirmationMessage(vagas, incluirPendentes = isGameDay()){
   // Jogadores já confirmados na tela de presença
   const confirmados = players.filter(p=>p.present);
   const gks  = confirmados.filter(p=>p.isGK);   // só entram nas vagas 1-2 (reservadas p/ 🥅)
@@ -3278,8 +3299,9 @@ function buildConfirmationMessage(vagas){
     msg += '```';
   }
 
-  // Seção só aparece se houver alguém que ainda não respondeu
-  if(pendentes.length){
+  // Seção só aparece se houver pendentes E o lembrete estiver ativado
+  // (por padrão, só no dia do jogo — ver isGameDay/GAME_WEEKDAY)
+  if(pendentes.length && incluirPendentes){
     msg += `\n\n⏳ *Ainda não responderam (${pendentes.length})*\n`;
     msg += '```\n';
     pendentes.forEach((name,i)=>{
@@ -3292,11 +3314,11 @@ function buildConfirmationMessage(vagas){
   return msg;
 }
 
-function buildAndSendConfirmationList(vagas){
+function buildAndSendConfirmationList(vagas, incluirPendentes = isGameDay()){
   const confirmados = players.filter(p=>p.present);
   if(vagas < confirmados.length){ toast(`⚠️ ${confirmados.length} confirmados, mas só ${vagas} vagas.`); }
 
-  const msg = buildConfirmationMessage(vagas);
+  const msg = buildConfirmationMessage(vagas, incluirPendentes);
 
   navigator.clipboard.writeText(msg).then(()=>toast('✅ Lista copiada!')).catch(()=>{
     const ta=document.createElement('textarea');
@@ -3731,7 +3753,7 @@ const CREDENTIALS = {
 };
 
 let currentRole = null; // 'admin' | 'player'
-let selectedRole = 'admin';
+let selectedRole = 'player';
 
 function selectRole(role){
   selectedRole = role;
@@ -3766,7 +3788,7 @@ function doLogout(){
   // Reset login form
   document.getElementById('login-pass').value = '';
   document.getElementById('login-error').classList.remove('show');
-  selectRole('admin');
+  selectRole('player');
   document.getElementById('login-screen').style.display = 'flex';
   document.body.classList.remove('player-mode-ro');
 }
