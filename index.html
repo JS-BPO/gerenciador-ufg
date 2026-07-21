@@ -935,6 +935,20 @@ textarea.wa-preview:focus { border-color:var(--gold); }
 .chur-card-stats b { color:var(--gold); font-size:11px; }
 .chur-card-del { background:none; border:none; color:var(--muted2); font-size:15px; cursor:pointer; padding:0 2px; line-height:1; flex-shrink:0; }
 .chur-card-del:hover { color:var(--red); }
+.chur-multi-list { max-height:320px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; }
+.chur-multi-item {
+  display:flex; align-items:center; gap:10px;
+  padding:9px 10px;
+  background:var(--graphite);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  cursor:pointer; user-select:none;
+  font-size:12px; font-weight:700; color:var(--white);
+  transition:border-color var(--trans), background var(--trans);
+}
+.chur-multi-item:has(input:checked) { border-color:var(--gold-dim); background:rgba(212,175,55,.08); }
+.chur-multi-item input[type="checkbox"] { width:16px; height:16px; accent-color:var(--gold); flex-shrink:0; }
+.chur-multi-empty { text-align:center; color:var(--muted); font-size:12px; padding:16px 0; }
 .fin-exp-item {
   display:flex;
   align-items:center;
@@ -1848,6 +1862,24 @@ textarea.wa-preview:focus { border-color:var(--gold); }
     <div class="fin-modal-actions" style="margin-top:16px">
       <button class="btn btn-gold" style="flex:1" onclick="vagasModalOk()">📤 Gerar Lista</button>
       <button class="btn btn-ghost" onclick="vagasModalCancel()">Cancelar</button>
+    </div>
+  </div>
+</div>
+<div id="chur-multi-modal-overlay" class="fin-modal-overlay" style="display:none" onclick="churMultiModalCancel(event)">
+  <div class="fin-modal" onclick="event.stopPropagation()">
+    <div class="fin-modal-title">
+      <span>👥 Adicionar Vários</span>
+      <button class="fin-modal-close" onclick="churMultiModalCancel()">✕</button>
+    </div>
+    <div class="fin-modal-row" style="flex-direction:column;gap:10px">
+      <input class="input-txt" id="chur-multi-search" type="text" placeholder="🔎 Buscar no elenco..." oninput="churMultiFilter()">
+      <button type="button" class="btn btn-outline btn-sm" style="width:100%" onclick="churMultiToggleAll()">✅ Marcar / Desmarcar Todos</button>
+      <div id="chur-multi-list" class="chur-multi-list"></div>
+      <div id="chur-multi-empty-search" class="chur-multi-empty" style="display:none">🔎 Nenhum nome encontrado.</div>
+    </div>
+    <div class="fin-modal-actions" style="margin-top:16px">
+      <button class="btn btn-gold" style="flex:1" onclick="churMultiConfirm()">➕ Adicionar Selecionados</button>
+      <button class="btn btn-ghost" onclick="churMultiModalCancel()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -2860,6 +2892,7 @@ document.addEventListener('keydown', e => {
   document.getElementById('fin-confirm-overlay').style.display = 'none';
   document.getElementById('vagas-modal-overlay').style.display = 'none';
   document.getElementById('cobranca-modal-overlay').style.display = 'none';
+  document.getElementById('chur-multi-modal-overlay').style.display = 'none';
 });
 
 // Expande/recolhe as seções colapsáveis da aba Financeiro (Resumo Anual, Backup)
@@ -3299,6 +3332,78 @@ function churAddParticipant(churId){
   renderChur();
 }
 
+// ─── CHURRASCO: adicionar vários participantes do elenco de uma vez ───
+let _churMultiId = null;
+
+function churOpenMultiModal(churId){
+  const chur = churFind(churId);
+  if(!chur) return;
+  _churMultiId = churId;
+
+  const existing  = new Set(chur.participants.map(p => p.name.trim().toLowerCase()));
+  const available = players
+    .filter(p => !existing.has(p.name.trim().toLowerCase()))
+    .sort((a,b) => a.name.localeCompare(b));
+
+  const listEl = document.getElementById('chur-multi-list');
+  listEl.innerHTML = available.length
+    ? available.map(p => `
+        <label class="chur-multi-item" data-name="${p.name.toLowerCase()}">
+          <input type="checkbox" value="${p.name.replace(/"/g,'&quot;')}">
+          <span>${p.name}</span>
+        </label>`).join('')
+    : '<div class="chur-multi-empty">🙌 Todo o elenco já foi adicionado a este churrasco.</div>';
+
+  const searchEl = document.getElementById('chur-multi-search');
+  searchEl.value = '';
+  document.getElementById('chur-multi-empty-search').style.display = 'none';
+  document.getElementById('chur-multi-modal-overlay').style.display = 'flex';
+}
+
+// Filtra os itens da lista pelo nome digitado, sem perder a marcação dos já selecionados.
+function churMultiFilter(){
+  const term  = document.getElementById('chur-multi-search').value.trim().toLowerCase();
+  const items = document.querySelectorAll('#chur-multi-list .chur-multi-item');
+  let visibleCount = 0;
+  items.forEach(item => {
+    const match = !term || item.dataset.name.includes(term);
+    item.style.display = match ? '' : 'none';
+    if(match) visibleCount++;
+  });
+  document.getElementById('chur-multi-empty-search').style.display = (items.length && !visibleCount) ? 'block' : 'none';
+}
+
+function churMultiToggleAll(){
+  const boxes = [...document.querySelectorAll('#chur-multi-list input[type="checkbox"]')]
+    .filter(b => b.closest('.chur-multi-item').style.display !== 'none');
+  const allChecked = boxes.length && boxes.every(b => b.checked);
+  boxes.forEach(b => b.checked = !allChecked);
+}
+
+function churMultiModalCancel(e){
+  if(e && e.target !== document.getElementById('chur-multi-modal-overlay')) return;
+  document.getElementById('chur-multi-modal-overlay').style.display = 'none';
+  _churMultiId = null;
+}
+
+function churMultiConfirm(){
+  const chur = churFind(_churMultiId);
+  if(!chur){ churMultiModalCancel(); return; }
+
+  const checked = document.querySelectorAll('#chur-multi-list input[type="checkbox"]:checked');
+  if(!checked.length){ toast('⚠️ Selecione ao menos um nome.'); return; }
+
+  checked.forEach(b => {
+    chur.participants.push({ id: chur.partNextId++, name: b.value, paid: false });
+  });
+  churSave(churData);
+
+  document.getElementById('chur-multi-modal-overlay').style.display = 'none';
+  _churMultiId = null;
+  renderChur();
+  toast(`✅ ${checked.length} participante${checked.length===1?'':'s'} adicionado${checked.length===1?'':'s'}!`);
+}
+
 function churToggleParticipant(churId, partId){
   const chur = churFind(churId);
   if(!chur) return;
@@ -3375,6 +3480,7 @@ function renderChur(){
           <input class="input-txt" id="chur-part-name-${chur.id}" type="text" list="chur-players-list" placeholder="Nome (busque no elenco ou digite)" maxlength="30" onkeydown="if(event.key==='Enter'){event.preventDefault();churAddParticipant(${chur.id});}">
           <button class="btn btn-gold" onclick="churAddParticipant(${chur.id})">➕</button>
         </div>
+        <button type="button" class="btn btn-outline btn-sm" style="width:100%;margin-bottom:8px" onclick="churOpenMultiModal(${chur.id})">👥 Adicionar Vários do Elenco</button>
         <div>${partsHtml}</div>
         ${total ? `<button class="btn btn-full wa-btn" style="margin-top:8px" onclick="churSendCobranca(${chur.id})">📤 Cobrar Rateio p/ WhatsApp</button>` : ''}
       </div>
