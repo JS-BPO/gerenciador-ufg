@@ -907,6 +907,34 @@ textarea.wa-preview:focus { border-color:var(--gold); }
 .fin-recv-del:hover { color:var(--red); }
 
 
+/* ── CHURRASCO ── */
+.chur-card {
+  background:var(--graphite);
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);
+  margin-bottom:10px;
+  overflow:hidden;
+}
+.chur-card-header {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 12px;
+  cursor:pointer;
+  user-select:none;
+}
+.chur-card-title { flex:1; min-width:0; }
+.chur-card-date { font-size:12px; font-weight:800; color:var(--white); }
+.chur-card-desc { font-size:10px; color:var(--muted); margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chur-card-total { font-size:11px; font-weight:800; color:var(--gold); white-space:nowrap; }
+.chur-card-arrow { font-size:11px; color:var(--muted2); transition:transform var(--trans); flex-shrink:0; }
+.chur-card.open .chur-card-arrow { transform:rotate(180deg); }
+.chur-card-body { display:none; padding:0 12px 12px; border-top:1px solid var(--border); }
+.chur-card.open .chur-card-body { display:block; padding-top:10px; }
+.chur-card-stats { display:flex; gap:14px; font-size:10px; color:var(--muted); margin-bottom:8px; flex-wrap:wrap; }
+.chur-card-stats b { color:var(--gold); font-size:11px; }
+.chur-card-del { background:none; border:none; color:var(--muted2); font-size:15px; cursor:pointer; padding:0 2px; line-height:1; flex-shrink:0; }
+.chur-card-del:hover { color:var(--red); }
 .fin-exp-item {
   display:flex;
   align-items:center;
@@ -1428,9 +1456,11 @@ textarea.wa-preview:focus { border-color:var(--gold); }
 .player-mode-ro #fin-fee-grid .fin-fee-item { pointer-events:none !important; }
 .player-mode-ro .fin-fee-item { cursor:default !important; pointer-events:none !important; }
 
-/* Remove Financeiro tab completely for player role */
+/* Remove Financeiro e Churrasco tabs completely for player role */
 .player-mode-ro .tab-btn[onclick*="'fin'"],
-.player-mode-ro #tab-fin { display:none !important; }
+.player-mode-ro #tab-fin,
+.player-mode-ro .tab-btn[onclick*="'chur'"],
+.player-mode-ro #tab-chur { display:none !important; }
 
 /* Jogador pode adicionar/editar/excluir jogadores e convidados livremente,
    além de sortear e enviar para WhatsApp — sem restrições de elenco. */
@@ -1500,6 +1530,7 @@ textarea.wa-preview:focus { border-color:var(--gold); }
   <button class="tab-btn active" onclick="switchTab('game',this)">📅 Dia de Jogo</button>
   <button class="tab-btn" onclick="switchTab('roster',this)">🗂️ Elenco</button>
   <button class="tab-btn" onclick="switchTab('fin',this)">💰 Financeiro<span class="tab-badge" id="fin-tab-badge" style="display:none">0</span></button>
+  <button class="tab-btn" onclick="switchTab('chur',this)">🍖 Churrasco</button>
 </div>
 
 <!-- ═══ MAIN ══════════════════════════════════════════════ -->
@@ -1538,6 +1569,7 @@ textarea.wa-preview:focus { border-color:var(--gold); }
       <div style="flex:1"></div>
       <button class="btn btn-gold" id="btn-draw" onclick="drawTeams()">⚽ Sortear</button>
       <button class="btn btn-ghost" id="btn-redraw" style="display:none" onclick="drawTeams()">🔄 Re-sortear</button>
+      <button class="btn btn-ghost" id="btn-clear-draw" style="display:none" onclick="clearDrawManual()">🗑 Limpar Sorteio</button>
     </div>
 
     <div id="teams-result"></div>
@@ -1686,6 +1718,27 @@ textarea.wa-preview:focus { border-color:var(--gold); }
 
   </div>
 
+  <!-- CHURRASCO -->
+  <div id="tab-chur" class="tab-panel">
+
+    <div class="section-label">🍖 Novo Churrasco</div>
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.5;padding:0 2px">
+      Registre a data, o valor total gasto e adicione quem ficou. O rateio é calculado automaticamente.
+    </div>
+
+    <div class="add-form" style="margin-bottom:6px;flex-wrap:wrap">
+      <input class="input-txt" id="chur-date" type="date" style="flex:1;min-width:120px">
+      <input class="input-txt" id="chur-desc" type="text" placeholder="Descrição (opcional)" maxlength="40" style="flex:2;min-width:140px">
+      <input class="input-txt" id="chur-total" type="number" min="0" step="0.01" placeholder="R$ total" style="width:90px;flex:none">
+      <button class="btn btn-gold" onclick="churCreate()">➕ Criar</button>
+    </div>
+
+    <div class="section-label" style="margin-top:16px">📋 Churrascos</div>
+    <div id="chur-list"></div>
+    <datalist id="chur-players-list"></datalist>
+
+  </div>
+
 </main>
 
 <!-- ═══ EDIT MODAL ══════════════════════════════════════════ -->
@@ -1801,7 +1854,7 @@ textarea.wa-preview:focus { border-color:var(--gold); }
 <div id="cobranca-modal-overlay" class="fin-modal-overlay" style="display:none" onclick="finCobrancaModalCancel(event)">
   <div class="fin-modal" onclick="event.stopPropagation()">
     <div class="fin-modal-title">
-      <span>📤 Cobrança de Mensalidade</span>
+      <span id="cobranca-modal-title-txt">📤 Cobrança de Mensalidade</span>
       <button class="fin-modal-close" onclick="finCobrancaModalCancel()">✕</button>
     </div>
     <div class="fin-modal-row" style="flex-direction:column;gap:12px">
@@ -1901,7 +1954,7 @@ let lastDraw=null;
 // ─── TABS ────────────────────────────────────────────────────
 function switchTab(tab,btn){
   // Jogador não tem acesso a nenhuma função financeira, mesmo via console/URL
-  if(tab==='fin' && currentRole==='player'){
+  if((tab==='fin' || tab==='chur') && currentRole==='player'){
     toast('⛔ Acesso restrito.');
     return;
   }
@@ -1912,6 +1965,7 @@ function switchTab(tab,btn){
   if(tab==='game')renderPresence();
   if(tab==='roster')renderRoster();
   if(tab==='fin')renderFin();
+  if(tab==='chur')renderChur();
   fadeIn(document.getElementById('tab-'+tab));
 }
 
@@ -1983,7 +2037,17 @@ function clearDraw(){
   document.getElementById('wa-area').style.display='none';
   document.getElementById('btn-draw').style.display='inline-flex';
   document.getElementById('btn-redraw').style.display='none';
+  document.getElementById('btn-clear-draw').style.display='none';
   document.getElementById('confirm-list-area').style.display='block';
+}
+
+// Limpa o sorteio manualmente (ex: sorteou só para visualizar) sem mexer
+// na lista de presença — diferente de clearDraw(), que é chamado
+// automaticamente sempre que a presença muda.
+function clearDrawManual(){
+  haptic();
+  clearDraw();
+  toast('🗑 Sorteio limpo. Presença mantida.');
 }
 
 // ─── DRAW ─────────────────────────────────────────────────────
@@ -2140,6 +2204,7 @@ function drawTeams(){
   renderTeams(teams);
   document.getElementById('btn-draw').style.display = 'none';
   document.getElementById('btn-redraw').style.display = 'inline-flex';
+  document.getElementById('btn-clear-draw').style.display = 'inline-flex';
   document.getElementById('wa-area').style.display = 'block';
   document.getElementById('confirm-list-area').style.display = 'none';
 }
@@ -3097,6 +3162,7 @@ function finSendCobranca(){
   msg += `\n\n`;
   msg += `Contamos com vocês! Bora deixar em dia pra seguirmos jogando tranquilos! 🥅💰`;
 
+  document.getElementById('cobranca-modal-title-txt').textContent = '📤 Cobrança de Mensalidade';
   _cobrancaModalMsg = msg; // guarda o texto original, útil se no futuro quisermos um botão "restaurar"
   document.getElementById('cobranca-modal-preview').value = msg;
   document.getElementById('cobranca-modal-overlay').style.display = 'flex';
@@ -3146,6 +3212,211 @@ function finCobrancaModalSend(){
   window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank');
   document.getElementById('cobranca-modal-overlay').style.display = 'none';
 }
+// ─── CHURRASCO ──────────────────────────────────────────────
+// Eventos pontuais de churrasco pós-jogo: valor total gasto,
+// participantes adicionados manualmente e rateio automático.
+const CHUR_KEY = 'ufg_chur_v1';
+
+function churDefaultData(){ return { list: [], nextId: 1 }; }
+function churLoad(){ try{ const r=localStorage.getItem(CHUR_KEY); if(r) return JSON.parse(r); }catch(e){} return null; }
+function churSave(d){
+  localStorage.setItem(CHUR_KEY, JSON.stringify(d));
+  fbPush('churrasco', d);
+}
+function churInit(){ return churLoad() || churDefaultData(); }
+
+let churData = churInit();
+let _churOpenIds = new Set(); // cards expandidos na tela (não persiste — reinicia fechado a cada load)
+
+function churFmtDate(iso){
+  if(!iso) return '';
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+function churFind(id){ return churData.list.find(c => c.id === id); }
+
+// Preenche o datalist com os nomes do elenco atual, para busca/autocomplete
+// ao adicionar participante — sem travar a digitação livre de nomes avulsos.
+function churPopulatePlayersDatalist(){
+  const dl = document.getElementById('chur-players-list');
+  if(!dl) return;
+  const names = players.map(p => p.name).sort((a,b) => a.localeCompare(b));
+  dl.innerHTML = names.map(n => `<option value="${n}">`).join('');
+}
+
+function churRateio(chur){
+  return chur.participants.length ? chur.total / chur.participants.length : 0;
+}
+
+function churCreate(){
+  const dateEl  = document.getElementById('chur-date');
+  const descEl  = document.getElementById('chur-desc');
+  const totalEl = document.getElementById('chur-total');
+  const date  = dateEl.value || new Date().toISOString().slice(0,10);
+  const desc  = descEl.value.trim();
+  const total = parseFloat(totalEl.value) || 0;
+  if(total <= 0){ toast('⚠️ Informe o valor total gasto.'); return; }
+
+  const chur = { id: churData.nextId++, date, desc, total, participants: [], partNextId: 1 };
+  churData.list.unshift(chur);
+  churSave(churData);
+
+  dateEl.value = ''; descEl.value = ''; totalEl.value = '';
+  _churOpenIds.add(chur.id);
+  renderChur();
+  toast('✅ Churrasco criado! Agora adicione quem ficou.');
+}
+
+function churDelChurrasco(id){
+  finConfirm(
+    '🍖 Excluir churrasco?',
+    'Esta ação não pode ser desfeita.',
+    () => {
+      churData.list = churData.list.filter(c => c.id !== id);
+      churSave(churData);
+      renderChur();
+      toast('🗑 Churrasco removido.');
+    }
+  );
+}
+
+function churToggleCard(id){
+  if(_churOpenIds.has(id)) _churOpenIds.delete(id);
+  else _churOpenIds.add(id);
+  renderChur();
+}
+
+function churAddParticipant(churId){
+  const chur = churFind(churId);
+  if(!chur) return;
+  const input = document.getElementById('chur-part-name-'+churId);
+  const name = input.value.trim();
+  if(!name){ toast('⚠️ Informe o nome do participante.'); return; }
+  chur.participants.push({ id: chur.partNextId++, name, paid: false });
+  churSave(churData);
+  input.value = '';
+  renderChur();
+}
+
+function churToggleParticipant(churId, partId){
+  const chur = churFind(churId);
+  if(!chur) return;
+  const p = chur.participants.find(x => x.id === partId);
+  if(p) p.paid = !p.paid;
+  churSave(churData);
+  renderChur();
+}
+
+function churDelParticipant(churId, partId){
+  finConfirm(
+    '🗑 Remover participante?',
+    'O rateio será recalculado automaticamente entre os demais.',
+    () => {
+      const chur = churFind(churId);
+      if(chur) chur.participants = chur.participants.filter(x => x.id !== partId);
+      churSave(churData);
+      renderChur();
+      toast('🗑 Removido.');
+    }
+  );
+}
+
+function renderChur(){
+  const el = document.getElementById('chur-list');
+  if(!el) return;
+  churPopulatePlayersDatalist();
+  if(!churData.list.length){
+    el.innerHTML = '<div class="empty"><div class="ico">🍖</div>Nenhum churrasco registrado ainda.</div>';
+    return;
+  }
+
+  el.innerHTML = churData.list.map(chur => {
+    const isOpen    = _churOpenIds.has(chur.id);
+    const rateio    = churRateio(chur);
+    const paidCount = chur.participants.filter(p => p.paid).length;
+    const total     = chur.participants.length;
+
+    // Ordena por urgência (pendente → pago), depois por nome — mesmo padrão dos convidados
+    const sorted = [...chur.participants].sort((a,b) => {
+      const ra = a.paid ? 1 : 0, rb = b.paid ? 1 : 0;
+      return ra !== rb ? ra - rb : a.name.localeCompare(b.name);
+    });
+
+    const partsHtml = sorted.length
+      ? sorted.map(p => {
+          const cls  = p.paid ? 'recv-paid' : 'recv-pending';
+          const icon = p.paid ? '✓' : '⏳';
+          return `<div class="fin-recv-item ${cls}" onclick="churToggleParticipant(${chur.id},${p.id})">
+            <div class="fin-recv-check">${icon}</div>
+            <span class="fin-recv-name">${p.name}</span>
+            <span class="fin-recv-amt">${finFmt(rateio)}</span>
+            <button class="fin-recv-del" onclick="event.stopPropagation();churDelParticipant(${chur.id},${p.id})" title="Excluir">🗑</button>
+          </div>`;
+        }).join('')
+      : '<div class="empty" style="padding:12px"><div class="ico">🙋</div>Ninguém adicionado ainda.</div>';
+
+    return `<div class="chur-card ${isOpen ? 'open' : ''}">
+      <div class="chur-card-header" onclick="churToggleCard(${chur.id})">
+        <div class="chur-card-title">
+          <div class="chur-card-date">🍖 ${churFmtDate(chur.date)}${chur.desc ? ' — '+chur.desc : ''}</div>
+          <div class="chur-card-desc">${total} pessoa${total===1?'':'s'} · ${paidCount}/${total} pagaram</div>
+        </div>
+        <div class="chur-card-total">${finFmt(chur.total)}</div>
+        <button class="chur-card-del" onclick="event.stopPropagation();churDelChurrasco(${chur.id})" title="Excluir churrasco">🗑</button>
+        <div class="chur-card-arrow">▾</div>
+      </div>
+      <div class="chur-card-body">
+        <div class="chur-card-stats">
+          <span>Rateio: <b>${finFmt(rateio)}</b> /pessoa</span>
+          <span>Total: <b>${finFmt(chur.total)}</b></span>
+        </div>
+        <div class="add-form" style="margin-bottom:8px">
+          <input class="input-txt" id="chur-part-name-${chur.id}" type="text" list="chur-players-list" placeholder="Nome (busque no elenco ou digite)" maxlength="30" onkeydown="if(event.key==='Enter'){event.preventDefault();churAddParticipant(${chur.id});}">
+          <button class="btn btn-gold" onclick="churAddParticipant(${chur.id})">➕</button>
+        </div>
+        <div>${partsHtml}</div>
+        ${total ? `<button class="btn btn-full wa-btn" style="margin-top:8px" onclick="churSendCobranca(${chur.id})">📤 Cobrar Rateio p/ WhatsApp</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Reaproveita o mesmo modal de cobrança da Mensalidade — só troca o título e o texto gerado.
+function churSendCobranca(churId){
+  const chur = churFind(churId);
+  if(!chur) return;
+  const rateio    = churRateio(chur);
+  const paidList  = chur.participants.filter(p => p.paid).map(p => p.name).sort((a,b)=>a.localeCompare(b));
+  const pendList  = chur.participants.filter(p => !p.paid).map(p => p.name).sort((a,b)=>a.localeCompare(b));
+
+  if(!pendList.length){
+    toast('✅ Todo mundo já pagou esse churrasco!');
+    return;
+  }
+
+  let msg = '';
+  msg += `${WA_BRAND_HEADER}\n`;
+  msg += `🍖 *Churrasco ${churFmtDate(chur.date)}*${chur.desc ? ' — '+chur.desc : ''}\n`;
+  msg += `Valor total: *${finFmt(chur.total)}* (${chur.participants.length} pessoa${chur.participants.length===1?'':'s'})\n`;
+  msg += `Sua parte: *${finFmt(rateio)}* cada\n\n`;
+
+  msg += `✅ *Já pagaram (${paidList.length}):* `;
+  msg += paidList.length ? paidList.join(', ') : '_Ninguém ainda_';
+  msg += `\n\n`;
+
+  msg += `⏳ *Ainda faltam (${pendList.length}):*\n`;
+  msg += pendList.map(n => `• ${n} — ${finFmt(rateio)}`).join('\n');
+
+  msg += `\n\n`;
+  msg += `Valeu quem ficou pro churrasco! Bora acertar essa aí 🍖🔥`;
+
+  document.getElementById('cobranca-modal-title-txt').textContent = '📤 Cobrança de Churrasco';
+  _cobrancaModalMsg = msg;
+  document.getElementById('cobranca-modal-preview').value = msg;
+  document.getElementById('cobranca-modal-overlay').style.display = 'flex';
+}
+
 function fisherYates(arr){
   for(let i = arr.length - 1; i > 0; i--){
     const j = Math.floor(Math.random() * (i + 1));
@@ -3552,7 +3823,8 @@ function backupExport(){
     version: 1,
     exportedAt: new Date().toISOString(),
     players,
-    finData
+    finData,
+    churData
   };
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
   const url  = URL.createObjectURL(blob);
@@ -3593,6 +3865,8 @@ function backupImportFile(evt){
       () => {
         localStorage.setItem(KEY, JSON.stringify(data.players));
         localStorage.setItem(FIN_KEY, JSON.stringify(data.finData));
+        // Backups antigos podem não ter churData — mantém compatibilidade
+        if(data.churData) localStorage.setItem(CHUR_KEY, JSON.stringify(data.churData));
         toast('✅ Backup restaurado! Recarregando...');
         setTimeout(() => location.reload(), 900);
       }
@@ -3606,8 +3880,8 @@ function backupImportFile(evt){
 // Modelo: 1 documento por dataset (ufg/players, ufg/finData).
 // Estratégia: localStorage continua sendo a fonte instantânea (offline-first);
 // o Firestore é sincronizado em paralelo e propaga mudanças pra todo mundo em tempo real.
-let _fbUnsubPlayers = null, _fbUnsubFin = null;
-let _fbLastWriteTs = { players: 0, finData: 0 }; // timestamp da última escrita local — detecta eco da própria escrita
+let _fbUnsubPlayers = null, _fbUnsubFin = null, _fbUnsubChur = null;
+let _fbLastWriteTs = { players: 0, finData: 0, churrasco: 0 }; // timestamp da última escrita local — detecta eco da própria escrita
 
 // Proteção contra "toque perdido": se uma atualização remota da Presença chegar
 // bem no instante de um toque/clique, o innerHTML seria reconstruído no meio da
@@ -3686,6 +3960,16 @@ function fbStartSync(){
       renderFin();
       setSyncStatus('synced');
     }, err => { console.warn('Firestore sync (finData):', err.message); setSyncStatus('error'); });
+
+    _fbUnsubChur = fbDB.collection('ufg').doc('churrasco').onSnapshot(snap => {
+      if(!snap.exists) return;
+      const d = snap.data();
+      if(d.updatedAt === _fbLastWriteTs.churrasco) return;
+      churData = d.data;
+      localStorage.setItem(CHUR_KEY, JSON.stringify(churData));
+      renderChur();
+      setSyncStatus('synced');
+    }, err => { console.warn('Firestore sync (churrasco):', err.message); setSyncStatus('error'); });
   }
 }
 
@@ -3708,6 +3992,7 @@ function fbMarkPresenceInteraction(){
 function fbStopSync(){
   if(_fbUnsubPlayers){ _fbUnsubPlayers(); _fbUnsubPlayers = null; }
   if(_fbUnsubFin){ _fbUnsubFin(); _fbUnsubFin = null; }
+  if(_fbUnsubChur){ _fbUnsubChur(); _fbUnsubChur = null; }
   setSyncStatus('offline');
 }
 
