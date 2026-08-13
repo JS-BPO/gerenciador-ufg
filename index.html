@@ -1847,6 +1847,11 @@ textarea.wa-preview:focus { border-color:var(--gold); }
         </div>
         <div id="vagas-modal-counter" class="vagas-counter"></div>
       </div>
+      <div class="fin-modal-field">
+        <label>⏰ Horário do jogo</label>
+        <input class="input-txt" id="vagas-modal-time" type="text" maxlength="12"
+          placeholder="Ex: 20h" oninput="vagasModalTimeChange(this.value)">
+      </div>
       <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)">
         <input type="checkbox" id="vagas-modal-incluir-pendentes" onchange="vagasModalUpdatePreview()">
         🔔 Incluir lembrete de quem não respondeu
@@ -2352,6 +2357,29 @@ const GAME_WEEKDAY = 5; // sexta-feira
 function isGameDay(date = new Date()){
   return date.getDay() === GAME_WEEKDAY;
 }
+
+// Calcula a data do próximo jogo: hoje, se já for dia de jogo, ou a próxima
+// ocorrência de GAME_WEEKDAY a partir de hoje.
+function getNextGameDate(date = new Date()){
+  const d = new Date(date);
+  const diff = (GAME_WEEKDAY - d.getDay() + 7) % 7;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+function fmtGameDate(date){
+  const dd = String(date.getDate()).padStart(2,'0');
+  const mm = String(date.getMonth()+1).padStart(2,'0');
+  return `${dd}/${mm}`;
+}
+
+// ─── HORÁRIO DO JOGO (editável, sincronizado na nuvem) ─────────
+const GAME_TIME_KEY = 'ufg_game_time_v1';
+function gameTimeLoad(){ try{ const r=localStorage.getItem(GAME_TIME_KEY); if(r) return r; }catch(e){} return '20h'; }
+function gameTimeSave(v){
+  localStorage.setItem(GAME_TIME_KEY, v);
+  fbPush('gameTime', v);
+}
+let gameTime = gameTimeLoad();
 
 function finKey(y, m){ return `${y}-${m}`; }
 
@@ -3561,6 +3589,7 @@ function sendConfirmationList(){
   _vagasModalConfirmados = confirmados.length;
 
   document.getElementById('vagas-modal-input').value = sugestao;
+  document.getElementById('vagas-modal-time').value = gameTime;
   document.getElementById('vagas-modal-preview').style.display = 'none';
   document.getElementById('vagas-modal-incluir-pendentes').checked = isGameDay();
   vagasModalUpdateCounter();
@@ -3580,6 +3609,13 @@ function vagasModalStep(delta){
   v = Math.min(99, Math.max(1, v));
   inp.value = v;
   vagasModalUpdateCounter();
+}
+
+// Salva o horário editado, sincroniza na nuvem e atualiza a pré-visualização em tempo real
+function vagasModalTimeChange(val){
+  gameTime = val.trim() || '20h';
+  gameTimeSave(gameTime);
+  vagasModalUpdatePreview();
 }
 
 // ── Contador confirmados x vagas, em tempo real ──
@@ -3654,40 +3690,30 @@ function buildConfirmationMessage(vagas, incluirPendentes = isGameDay()){
   // Quem ainda não respondeu (nem confirmou presença, nem recusou)
   const pendentes = players.filter(p=>!p.present && !p.declined).map(p=>p.name).sort((a,b)=>a.localeCompare(b));
 
-  // Bloco monoespaçado (```) garante que a numeração não desalinhe no WhatsApp
-  let msg = `${WA_BRAND_HEADER}\n📋 *LISTA DE CONFIRMAÇÃO*\nQuem vai jogar? Responda com seu nome na numeração disponível. 👇\n\n`;
+  const gameDateLabel = fmtGameDate(getNextGameDate());
 
-  msg += '✅ *Confirmados*\n';
-  msg += '```\n';
+  let msg = `🗒️ *Confirmação de Presença*\n📅 Jogo: ${gameDateLabel} às ${gameTime}\n\n`;
+
+  msg += '✅ *Vai jogar*\n';
   for(let i=1;i<=vagas;i++){
     // Vagas 1-2: só preenche se houver goleiro confirmado; nunca usa jogador de linha
     const p = i<=2 ? gksReservados[i-1] : outros[i-3];
-    msg += `${String(i).padStart(2,'0')}. ${i<=2?'🥅 ':''}${p?p.name:''}\n`;
+    msg += `${i<=2?'🥅 ':''}${String(i).padStart(2,'0')} - ${p?p.name:''}\n`;
   }
-  msg += '```';
 
-  // Seção só aparece se houver alguém recusado (evita bloco vazio)
-  if(declinados.length){
-    msg += `\n\n❌ *Não vão jogar*\n`;
-    msg += '```\n';
-    declinados.forEach((name,i)=>{
-      msg += `${String(i+1).padStart(2,'0')}. ${name}\n`;
-    });
-    msg += '```';
-  }
+  msg += `\n❌ *Não vai*\n`;
+  msg += declinados.length
+    ? declinados.map(name => `- ${name}`).join('\n') + '\n'
+    : '-\n';
 
   // Seção só aparece se houver pendentes E o lembrete estiver ativado
   // (por padrão, só no dia do jogo — ver isGameDay/GAME_WEEKDAY)
   if(pendentes.length && incluirPendentes){
-    msg += `\n\n⏳ *Ainda não responderam (${pendentes.length})*\n`;
-    msg += '```\n';
-    pendentes.forEach((name,i)=>{
-      msg += `${String(i+1).padStart(2,'0')}. ${name}\n`;
-    });
-    msg += '```';
+    msg += `\n⏳ *Ainda não respondeu (${pendentes.length})*\n`;
+    msg += pendentes.map(name => `- ${name}`).join('\n') + '\n';
   }
 
-  msg += `\n\n*⏰ Confirme sua presença até o meio-dia do dia do jogo.*\n\n*Se não puder comparecer, avise no grupo para facilitar a organização e o fechamento da lista.*`;
+  msg += `\n⏰ *Confirme sua presença até às 12h do dia do jogo.*`;
   return msg;
 }
 
@@ -3986,8 +4012,8 @@ function backupImportFile(evt){
 // Modelo: 1 documento por dataset (ufg/players, ufg/finData).
 // Estratégia: localStorage continua sendo a fonte instantânea (offline-first);
 // o Firestore é sincronizado em paralelo e propaga mudanças pra todo mundo em tempo real.
-let _fbUnsubPlayers = null, _fbUnsubFin = null, _fbUnsubChur = null;
-let _fbLastWriteTs = { players: 0, finData: 0, churrasco: 0 }; // timestamp da última escrita local — detecta eco da própria escrita
+let _fbUnsubPlayers = null, _fbUnsubFin = null, _fbUnsubChur = null, _fbUnsubGameTime = null;
+let _fbLastWriteTs = { players: 0, finData: 0, churrasco: 0, gameTime: 0 }; // timestamp da última escrita local — detecta eco da própria escrita
 
 // Proteção contra "toque perdido": se uma atualização remota da Presença chegar
 // bem no instante de um toque/clique, o innerHTML seria reconstruído no meio da
@@ -4055,6 +4081,19 @@ function fbStartSync(){
     setSyncStatus('synced');
   }, err => { console.warn('Firestore sync (players):', err.message); setSyncStatus('error'); });
 
+  // Horário do jogo — disponível para admin e jogador (aparece na aba Dia de Jogo)
+  _fbUnsubGameTime = fbDB.collection('ufg').doc('gameTime').onSnapshot(snap => {
+    if(!snap.exists) return;
+    const d = snap.data();
+    if(d.updatedAt === _fbLastWriteTs.gameTime) return;
+    gameTime = d.data;
+    localStorage.setItem(GAME_TIME_KEY, gameTime);
+    const timeInp = document.getElementById('vagas-modal-time');
+    if(timeInp) timeInp.value = gameTime;
+    vagasModalUpdatePreview();
+    setSyncStatus('synced');
+  }, err => { console.warn('Firestore sync (gameTime):', err.message); setSyncStatus('error'); });
+
   // Financeiro — só sincroniza (lê) quando logado como admin
   if(currentRole === 'admin'){
     _fbUnsubFin = fbDB.collection('ufg').doc('finData').onSnapshot(snap => {
@@ -4099,6 +4138,7 @@ function fbStopSync(){
   if(_fbUnsubPlayers){ _fbUnsubPlayers(); _fbUnsubPlayers = null; }
   if(_fbUnsubFin){ _fbUnsubFin(); _fbUnsubFin = null; }
   if(_fbUnsubChur){ _fbUnsubChur(); _fbUnsubChur = null; }
+  if(_fbUnsubGameTime){ _fbUnsubGameTime(); _fbUnsubGameTime = null; }
   setSyncStatus('offline');
 }
 
