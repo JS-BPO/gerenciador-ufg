@@ -3692,7 +3692,7 @@ function buildConfirmationMessage(vagas, incluirPendentes = isGameDay()){
 
   const gameDateLabel = fmtGameDate(getNextGameDate());
 
-  let msg = `🗒️ *Confirmação de Presença*\n📅 Jogo: ${gameDateLabel} às ${gameTime}\n\n`;
+  let msg = `${WA_BRAND_HEADER}\n🗒️ *Confirmação de Presença*\n📅 Jogo: ${gameDateLabel} às ${gameTime}\n\n`;
 
   msg += '✅ *Vai jogar*\n';
   for(let i=1;i<=vagas;i++){
