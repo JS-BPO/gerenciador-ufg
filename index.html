@@ -533,10 +533,15 @@ main {
 }
 
 .player-level-badge {
-  font-size:13px;
+  font-size:10px;
+  font-weight:700;
+  color:var(--muted);
   text-align:center;
-  padding:4px 0;
+  padding:5px 0;
   letter-spacing:.02em;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 
 .player-card-actions {
@@ -4923,8 +4928,10 @@ function playerLevelVal(p){
 }
 
 function playerLevelLabel(p){
-  const lvl = p.isGK ? '🥅' : (p.stars === 3 ? '⭐⭐⭐' : p.stars === 2 ? '⭐⭐' : '⭐');
-  return p.isGuest ? `🤝 ${lvl}` : lvl;
+  // O nível (estrelas) não aparece no card — só dentro de ✏️ Editar —
+  // para ninguém ver de cara como foi classificado. O sorteio continua usando.
+  const lvl = p.isGK ? '🥅 Goleiro' : '⚽ Linha';
+  return p.isGuest ? `🤝 ${p.isGK ? '🥅' : '⚽'} Convidado` : lvl;
 }
 
 function renderRoster(){
