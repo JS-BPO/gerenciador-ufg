@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Gerenciador UFG</title>
+<meta name="description" content="Confirme sua presença no Rachão de Sexta em 1 toque.">
+<meta property="og:title" content="Gerenciador UFG ⚽">
+<meta property="og:description" content="Rachão de Sexta · União Figueira Grande — confirme sua presença em 1 toque.">
+<meta property="og:url" content="https://js-bpo.github.io/gerenciador-ufg/">
+<meta property="og:type" content="website">
 <style>
 /* ─── DESIGN TOKENS ───────────────────────────────────────── */
 :root {
@@ -1545,6 +1550,34 @@ body { max-width:100%; overflow-x:clip; }
 
 .fin-modal-row label.chur-multi-item, #recv-multi-list label.chur-multi-item { display:flex; text-transform:none; letter-spacing:0; font-size:12px; font-weight:700; color:var(--white); margin:0; }
 
+/* ─── CONFIRMAÇÃO RÁPIDA ("Quem é você?" + VOU JOGAR) ─────────── */
+.me-card{background:linear-gradient(135deg,#1A1A1A 0%,#141408 100%);border:1.5px solid rgba(212,175,55,.45);border-radius:14px;padding:16px 14px 14px;margin:4px 0 14px;box-shadow:0 4px 22px rgba(0,0,0,.55)}
+.me-card.me-ok{border-color:#3DBE6B;background:linear-gradient(135deg,#0f1f15,#121212)}
+.me-card.me-out{border-color:rgba(224,82,82,.55);background:linear-gradient(135deg,#1f1212,#121212)}
+.me-hi{font-size:12px;color:var(--muted);font-weight:700}
+.me-hi b{color:var(--white)}
+.me-game{font-size:17px;font-weight:900;color:var(--gold);margin:3px 0 12px;letter-spacing:.02em}
+.me-btns{display:flex;gap:8px}
+.me-yes{flex:2;padding:16px 8px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:#000;font-size:15px;font-weight:900;letter-spacing:.04em;cursor:pointer}
+.me-no{flex:1;padding:16px 8px;border-radius:10px;background:transparent;border:1.5px solid rgba(224,82,82,.45);color:var(--red);font-size:13px;font-weight:800;cursor:pointer}
+.me-yes:active,.me-no:active{transform:scale(.98)}
+.me-bar{height:7px;background:var(--surface3);border-radius:10px;margin:14px 0 6px;overflow:hidden}
+.me-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));transition:width .3s}
+.me-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-weight:700}
+.me-meta b{color:var(--gold)}
+.me-switch{display:block;margin:10px auto 0;background:none;border:none;font-size:10px;color:var(--muted2);text-decoration:underline;cursor:pointer}
+.me-done{display:flex;align-items:center;gap:12px;padding:4px 0 2px}
+.me-done .ico{width:46px;height:46px;border-radius:50%;background:#3DBE6B;color:#000;font-size:24px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.me-out .me-done .ico{background:var(--red);color:#fff}
+.me-done .t1{font-size:16px;font-weight:900;color:#5fe88a}
+.me-out .me-done .t1{color:var(--red)}
+.me-done .t2{font-size:11px;color:var(--muted);margin-top:2px}
+.me-undo{margin-top:12px;width:100%;padding:10px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer}
+.me-ask{width:100%;padding:13px;border-radius:12px;border:1.5px dashed rgba(212,175,55,.5);background:rgba(212,175,55,.05);color:var(--gold);font-size:13px;font-weight:800;margin:4px 0 14px;cursor:pointer}
+.who-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-height:46vh;overflow-y:auto}
+.who-item{padding:12px 10px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:700;color:var(--white);text-align:left;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who-item:active{border-color:var(--gold);color:var(--gold)}
+
 /* ─── CALENDÁRIO PRÓPRIO (no lugar do calendário nativo do celular) ── */
 .ufg-date-btn {
   width:100%; min-width:0; text-align:left; cursor:pointer;
@@ -1694,6 +1727,8 @@ body:not(.player-mode-ro) .tab-chur-btn { display:none !important; }
 
   <!-- PARTIDAS (DIA DE JOGO) -->
   <div id="tab-game" class="tab-panel active">
+
+    <div id="me-box"></div>
 
     <div class="legend">
       <span>🥅 = Goleiro</span>
@@ -2271,6 +2306,17 @@ body:not(.player-mode-ro) .tab-chur-btn { display:none !important; }
   </div>
 </div>
 
+<!-- ═══ QUEM É VOCÊ? (confirmação rápida) ═══════════════════════ -->
+<div id="who-overlay" class="fin-modal-overlay" style="display:none" onclick="if(event.target===this)meSkip()">
+  <div class="fin-modal" onclick="event.stopPropagation()">
+    <div class="fin-modal-title"><span>👋 Quem é você?</span><button class="fin-modal-close" onclick="meSkip()">✕</button></div>
+    <div style="font-size:12px;color:var(--muted);margin:-4px 0 10px;line-height:1.5">Toque no seu nome. O app lembra neste celular — da próxima vez é só abrir e confirmar.</div>
+    <input class="input-txt" id="who-search" type="text" placeholder="🔎 Buscar meu nome..." oninput="meFilter()" style="width:100%;margin-bottom:8px">
+    <div class="who-list" id="who-list"></div>
+    <div class="fin-modal-actions" style="margin-top:12px"><button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="meSkip()">Agora não</button></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <!-- ═══ FIREBASE — Sincronização em Nuvem ════════════════════
@@ -2335,6 +2381,108 @@ function initData(){
 let players=initData();
 let lastDraw=null;
 
+// Endereço público do app (vai no final da Lista de Confirmação do WhatsApp)
+const APP_URL = 'https://js-bpo.github.io/gerenciador-ufg/';
+// Vagas padrão do jogo (lista de confirmação e barra de vagas do cartão)
+const GAME_SLOTS = 14;
+
+// ─── CONFIRMAÇÃO RÁPIDA: "Quem é você?" + VOU JOGAR ─────────────
+// O celular lembra quem é a pessoa (só neste aparelho). Na próxima vez,
+// o topo de Partidas já mostra o botão de confirmar em 1 toque.
+const ME_KEY = 'ufg_me_v1';
+function meGet(){
+  try{ const id = Number(localStorage.getItem(ME_KEY)); return players.find(p => p.id === id) || null; }catch(e){ return null; }
+}
+function meSet(id){
+  try{ localStorage.setItem(ME_KEY, String(id)); }catch(e){}
+  try{ sessionStorage.removeItem('ufg_me_skip'); }catch(e){}
+  document.getElementById('who-overlay').style.display = 'none';
+  renderMeCard();
+  const p = meGet();
+  if(p) toast(`👋 Oi, ${p.name}! Agora é só tocar em VOU JOGAR.`);
+}
+function meOpen(){
+  const list = [...players].sort((a,b) => a.name.localeCompare(b.name));
+  document.getElementById('who-search').value = '';
+  document.getElementById('who-list').innerHTML = list.map(p =>
+    `<button type="button" class="who-item" data-name="${p.name.toLowerCase().replace(/"/g,'')}" onclick="meSet(${p.id})">${p.isGK ? '🥅 ' : ''}${p.name}</button>`).join('');
+  document.getElementById('who-overlay').style.display = 'flex';
+}
+function meFilter(){
+  const t = document.getElementById('who-search').value.trim().toLowerCase();
+  document.querySelectorAll('#who-list .who-item').forEach(b => b.style.display = (!t || b.dataset.name.includes(t)) ? '' : 'none');
+}
+function meSkip(){
+  try{ sessionStorage.setItem('ufg_me_skip', '1'); }catch(e){}
+  document.getElementById('who-overlay').style.display = 'none';
+  renderMeCard();
+}
+// Pergunta "Quem é você?" só se ainda não souber e não tiver pulado nesta sessão
+function meMaybeAsk(){
+  let skipped = false;
+  try{ skipped = sessionStorage.getItem('ufg_me_skip') === '1'; }catch(e){}
+  if(!meGet() && !skipped && players.length) meOpen();
+}
+function meAnswer(going){
+  const p = meGet();
+  if(!p) return;
+  haptic();
+  p.present  = !!going;
+  p.declined = !going;
+  save(players);
+  renderPresence(); clearDraw();
+  toast(going ? '✅ Presença confirmada! Bora!' : '👍 Beleza, marcado que você não vai.');
+}
+function meReset(){
+  const p = meGet();
+  if(!p) return;
+  p.present = false; p.declined = false;
+  save(players);
+  renderPresence(); clearDraw();
+}
+function renderMeCard(){
+  const box = document.getElementById('me-box');
+  if(!box) return;
+  const p = meGet();
+  if(!p){
+    box.innerHTML = `<button type="button" class="me-ask" onclick="meOpen()">👋 Quem é você? Toque para confirmar presença em 1 toque</button>`;
+    return;
+  }
+  const conf   = players.filter(x => x.present).length;
+  const restam = Math.max(0, GAME_SLOTS - conf);
+  const pct    = Math.min(100, Math.round(conf / GAME_SLOTS * 100));
+  const jogo   = `${WEEKDAYS[GAME_WEEKDAY]} ${fmtGameDate(getNextGameDate())} · ${gameTime}`;
+  if(p.present){
+    box.innerHTML = `<div class="me-card me-ok">
+      <div class="me-done"><div class="ico">✓</div><div>
+        <div class="t1">Presença confirmada, ${p.name}!</div>
+        <div class="t2">${jogo} · ${conf} de ${GAME_SLOTS} vagas</div></div></div>
+      <button type="button" class="me-undo" onclick="meAnswer(false)">Mudou de ideia? Marcar "Não vou"</button>
+    </div>`;
+    return;
+  }
+  if(p.declined){
+    box.innerHTML = `<div class="me-card me-out">
+      <div class="me-done"><div class="ico">✕</div><div>
+        <div class="t1">${p.name}, você marcou que não vai</div>
+        <div class="t2">${jogo} · ${conf} de ${GAME_SLOTS} vagas</div></div></div>
+      <button type="button" class="me-undo" onclick="meAnswer(true)">Mudou de ideia? Vou jogar ✅</button>
+    </div>`;
+    return;
+  }
+  box.innerHTML = `<div class="me-card">
+    <div class="me-hi">👋 Olá, <b>${p.name}</b>!</div>
+    <div class="me-game">⚽ ${jogo}</div>
+    <div class="me-btns">
+      <button type="button" class="me-yes" onclick="meAnswer(true)">✅ VOU JOGAR${restam === 0 ? ' (suplente)' : ''}</button>
+      <button type="button" class="me-no" onclick="meAnswer(false)">❌ Não vou</button>
+    </div>
+    <div class="me-bar"><i style="width:${pct}%"></i></div>
+    <div class="me-meta"><span><b>${conf}</b> de ${GAME_SLOTS} vagas preenchidas</span><span>${restam ? `restam <b>${restam}</b>` : '<b>lista cheia</b>'}</span></div>
+    <button type="button" class="me-switch" onclick="meOpen()">Não é você? Trocar</button>
+  </div>`;
+}
+
 // ─── TABS ────────────────────────────────────────────────────
 function switchTab(tab,btn){
   // Jogador não tem acesso a nenhuma função financeira, mesmo via console/URL
@@ -2375,6 +2523,7 @@ function renderPresence(){
       </span>
     </div>`).join('');
   updateStats();
+  renderMeCard();
 }
 
 function toggleP(id){
@@ -3691,6 +3840,7 @@ document.addEventListener('keydown', e => {
   document.getElementById('pp-modal-overlay').style.display = 'none';
   document.getElementById('dp-overlay').style.display = 'none';
   document.getElementById('recv-multi-modal-overlay').style.display = 'none';
+  document.getElementById('who-overlay').style.display = 'none';
 });
 
 // Expande/recolhe as seções colapsáveis da aba Financeiro (Resumo Anual, Backup)
@@ -4743,8 +4893,7 @@ function sendConfirmationList(){
   // Sugestão: número padrão do jogo é 14 vagas — sempre pré-preenche 14, e só
   // cresce automaticamente se já houver mais confirmados que isso (nunca sugere
   // menos que o total de confirmados). Continua editável no stepper.
-  const VAGAS_PADRAO = 14;
-  const sugestao = Math.max(VAGAS_PADRAO, confirmados.length);
+  const sugestao = Math.max(GAME_SLOTS, confirmados.length);
 
   _vagasModalConfirmados = confirmados.length;
 
@@ -4872,6 +5021,13 @@ function buildConfirmationMessage(vagas, incluirPendentes = isGameDay()){
     msg += `\n⏳ *Ainda não respondeu (${pendentes.length})*\n`;
     msg += pendentes.map(name => `- ${name}`).join('\n') + '\n';
   }
+
+  // Convite para confirmar pelo app (link + vagas restantes)
+  const restam = Math.max(0, vagas - confirmados.length);
+  msg += restam > 0
+    ? `\n🔥 *Restam ${restam} vaga${restam > 1 ? 's' : ''}!*\n`
+    : `\n✅ *Lista completa!* Quem confirmar agora entra como suplente.\n`;
+  msg += `📲 *Confirme em 1 toque no Gerenciador UFG:*\n${APP_URL}\n`;
 
   msg += `\n⏰ *Confirme sua presença até às 12h do dia do jogo.*`;
   return msg;
@@ -5538,6 +5694,7 @@ const CREDENTIALS = {
 };
 
 let currentRole = null; // 'admin' | 'player'
+const REMEMBER_KEY = 'ufg_auth_remember_v1';
 let selectedRole = 'player';
 
 function selectRole(role){
@@ -5561,12 +5718,19 @@ function doLogin(){
 
   currentRole = selectedRole;
   sessionStorage.setItem(AUTH_KEY, currentRole);
+  // Jogador: lembra o acesso neste aparelho (abrir o link = já entra).
+  // Administrador: nunca fica lembrado, continua pedindo senha.
+  try{
+    if(currentRole === 'player') localStorage.setItem(REMEMBER_KEY, 'player');
+    else localStorage.removeItem(REMEMBER_KEY);
+  }catch(e){}
   fbSignIn(currentRole, pass);
   showApp();
 }
 
 function doLogout(){
   sessionStorage.removeItem(AUTH_KEY);
+  try{ localStorage.removeItem(REMEMBER_KEY); }catch(e){}
   currentRole = null;
   fbStopSync();
   if(fbAuth) fbAuth.signOut().catch(()=>{});
@@ -5607,15 +5771,26 @@ function showApp(){
     renderFin();
   }
   syncFeeStatus();
+  renderMeCard();
+  setTimeout(meMaybeAsk, 350);
 }
 
 // Check session on load
 (function initAuth(){
   const saved = sessionStorage.getItem(AUTH_KEY);
+  let remembered = null;
+  try{ remembered = localStorage.getItem(REMEMBER_KEY); }catch(e){}
   if(saved && (saved === 'admin' || saved === 'player')){
     selectedRole = saved;
     currentRole = saved;
     showApp();
+  } else if(remembered === 'player'){
+    // Jogador que já entrou neste aparelho: abre direto, sem senha
+    selectedRole = currentRole = 'player';
+    sessionStorage.setItem(AUTH_KEY, 'player');
+    showApp();
+    // Firebase normalmente restaura a sessão sozinho; se não restaurar, entra anônimo
+    setTimeout(() => { if(fbAuth && !fbAuth.currentUser) fbSignIn('player', ''); }, 2500);
   }
   // Copy logo to login screen
   document.getElementById('login-logo-img').src = document.getElementById('logo-img').src;
