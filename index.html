@@ -1434,6 +1434,82 @@ textarea.wa-preview:focus { border-color:var(--gold); }
   .header-bar{ gap:8px; padding:8px 10px; }
 }
 
+
+/* ─── FINANCEIRO v2: sub-abas, KPIs extras, recorrências, pessoas ── */
+.fin-subtabs {
+  display:flex;
+  gap:5px;
+  overflow-x:auto;
+  padding:2px 0 8px;
+  margin-bottom:6px;
+  scrollbar-width:none;
+}
+.fin-subtabs::-webkit-scrollbar { display:none; }
+.fin-subtab {
+  flex:0 0 auto;
+  background:var(--graphite);
+  border:1.5px solid var(--border);
+  color:var(--muted);
+  border-radius:20px;
+  padding:6px 11px;
+  font-size:11px;
+  font-weight:700;
+  cursor:pointer;
+  white-space:nowrap;
+  transition:all var(--trans);
+}
+.fin-subtab.active { border-color:var(--gold); color:var(--gold); background:rgba(212,175,55,.08); }
+.fin-sub { display:none; }
+.fin-sub.active { display:block; }
+.fin-hint { font-size:10px; color:var(--muted); margin-bottom:8px; line-height:1.5; padding:0 2px; }
+.fin-hint b { color:var(--gold-dim); }
+.fin-kpi-row { grid-template-columns:repeat(3,1fr); }
+.fin-kpi-sub { font-size:9px; color:var(--muted); margin-top:3px; line-height:1.3; }
+.fin-kpi-recv { border-color:rgba(212,175,55,.35); }
+.fin-kpi-recv .fin-kpi-val { color:var(--gold); }
+.fin-kpi-pay  { border-color:rgba(160,160,160,.35); }
+.fin-kpi-over { border-color:rgba(224,82,82,.35); }
+.fin-kpi-over .fin-kpi-val { color:var(--muted); }
+.fin-kpi-over.has-over { border-color:var(--red); background:rgba(224,82,82,.07); }
+.fin-kpi-over.has-over .fin-kpi-val { color:var(--red); }
+.fin-fee-config { display:flex; gap:14px; flex-wrap:wrap; font-size:10px; color:var(--muted); margin-bottom:6px; padding:0 2px; }
+.fin-fee-config label { display:flex; align-items:center; gap:5px; font-weight:700; }
+.fin-mini-input {
+  width:52px; background:var(--surface2); border:1px solid var(--border); color:var(--gold);
+  border-radius:4px; padding:3px 4px; font-size:11px; font-weight:700; text-align:center;
+}
+.fin-due { font-size:9px; color:var(--muted); white-space:nowrap; flex-shrink:0; }
+.fin-rec-tag { font-size:10px; flex-shrink:0; }
+.fin-fee-item.overdue-fee { border-color:var(--red); background:rgba(224,82,82,.14); }
+.fin-exp-item.exp-overdue { border-color:var(--red); background:rgba(224,82,82,.08); }
+.fin-exp-item.exp-overdue .fin-exp-check { background:rgba(224,82,82,.2); border-color:var(--red); color:var(--red); }
+.fin-exp-item.exp-overdue .fin-exp-val { color:var(--red); }
+
+.rec-form { display:flex; flex-direction:column; gap:7px; background:var(--graphite); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px; }
+.rec-row { display:flex; gap:7px; }
+.rec-row > * { flex:1 1 0; min-width:0; }
+.rec-lbl { display:flex; flex-direction:column; gap:3px; font-size:9px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+.rec-item, .pp-item {
+  display:flex; align-items:center; gap:8px; padding:9px 10px;
+  background:var(--graphite); border:1.5px solid var(--border); border-radius:var(--radius-sm); margin-bottom:5px;
+}
+.rec-item.rec-paused { border-style:dashed; opacity:.75; }
+.rec-item.rec-ended  { opacity:.45; }
+.rec-main, .pp-main { flex:1; min-width:0; }
+.rec-title, .pp-name { font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.rec-meta, .pp-meta { font-size:10px; color:var(--muted); margin-top:2px; }
+.rec-val { font-size:12px; font-weight:800; white-space:nowrap; }
+.rec-val.in { color:#3DBE6B; } .rec-val.out { color:var(--red); }
+.rec-actions { display:flex; gap:3px; flex-shrink:0; }
+.rec-actions button {
+  background:var(--surface2); border:1px solid var(--border); color:var(--white);
+  border-radius:5px; padding:4px 6px; font-size:12px; cursor:pointer;
+}
+.rec-actions button:hover { border-color:var(--gold); }
+.pp-badge { font-size:9px; font-weight:700; border-radius:4px; padding:1px 6px; margin-left:4px; background:var(--surface2); color:var(--muted); }
+.pp-badge.gold { color:var(--gold); }
+.pp-item.pp-inactive { opacity:.5; }
+
 /* ─── PLAYER mode: full roster access, NO financial access ──── */
 .player-mode-ro #fin-recv-name,
 .player-mode-ro #fin-recv-val,
@@ -1470,11 +1546,15 @@ textarea.wa-preview:focus { border-color:var(--gold); }
 .player-mode-ro #fin-fee-grid .fin-fee-item { pointer-events:none !important; }
 .player-mode-ro .fin-fee-item { cursor:default !important; pointer-events:none !important; }
 
-/* Remove Financeiro e Churrasco tabs completely for player role */
+/* Remove Financeiro tab completely for player role */
 .player-mode-ro .tab-btn[onclick*="'fin'"],
-.player-mode-ro #tab-fin,
-.player-mode-ro .tab-btn[onclick*="'chur'"],
-.player-mode-ro #tab-chur { display:none !important; }
+.player-mode-ro #tab-fin { display:none !important; }
+
+/* Churrasco: o jogador tem aba própria (é algo à parte do caixa — quem
+   comprou a carne lança e calcula o rateio na hora). O admin usa a
+   sub-aba dentro do Financeiro, então a aba de topo fica só para o jogador. */
+body:not(.player-mode-ro) .tab-chur-btn { display:none !important; }
+.player-mode-ro .chur-admin-only { display:none !important; }
 
 /* Jogador pode adicionar/editar/excluir jogadores e convidados livremente,
    além de sortear e enviar para WhatsApp — sem restrições de elenco. */
@@ -1537,20 +1617,18 @@ textarea.wa-preview:focus { border-color:var(--gold); }
 </header>
 
 
-</div>
-
 <!-- ═══ TABS ══════════════════════════════════════════════ -->
-<div class="tabs" style="top:57px;">
-  <button class="tab-btn active" onclick="switchTab('game',this)">📅 Dia de Jogo</button>
+<div class="tabs" style="top:81px;">
+  <button class="tab-btn active" onclick="switchTab('game',this)">📅 Partidas</button>
   <button class="tab-btn" onclick="switchTab('roster',this)">🗂️ Elenco</button>
   <button class="tab-btn" onclick="switchTab('fin',this)">💰 Financeiro<span class="tab-badge" id="fin-tab-badge" style="display:none">0</span></button>
-  <button class="tab-btn" onclick="switchTab('chur',this)">🍖 Churrasco</button>
+  <button class="tab-btn tab-chur-btn" onclick="switchTab('chur',this)">🍖 Churrasco</button>
 </div>
 
 <!-- ═══ MAIN ══════════════════════════════════════════════ -->
 <main>
 
-  <!-- DIA DE JOGO -->
+  <!-- PARTIDAS (DIA DE JOGO) -->
   <div id="tab-game" class="tab-panel active">
 
     <div class="legend">
@@ -1599,7 +1677,7 @@ textarea.wa-preview:focus { border-color:var(--gold); }
 
     <div class="section-label">Adicionar Jogador</div>
     <div class="add-form">
-      <input class="input-txt" id="new-name" type="text" placeholder="Nome do jogador" maxlength="25"
+      <input class="input-txt" id="new-name" type="text" placeholder="Nome ou apelido do jogador" maxlength="25"
         onkeydown="if(event.key==='Enter')addPlayer()">
       <button class="btn btn-gold" onclick="addPlayer()">➕</button>
     </div>
@@ -1613,145 +1691,255 @@ textarea.wa-preview:focus { border-color:var(--gold); }
   <!-- FINANCEIRO -->
   <div id="tab-fin" class="tab-panel">
 
-    <!-- ── MÊS SELECTOR ── -->
+    <!-- ── MÊS SELECTOR (vale para todas as sub-abas) ── -->
     <div class="fin-month-bar">
       <button class="fin-arrow" onclick="finNavMonth(-1)">‹</button>
       <div class="fin-month-label" id="fin-month-label">Junho 2026</div>
       <button class="fin-arrow" onclick="finNavMonth(1)">›</button>
     </div>
 
-    <!-- ── CAIXA TOTAL (banner único no topo) ── -->
-    <div class="fin-balance-banner" id="fin-balance-banner">
-      <div class="fin-bal-item" style="padding:14px 16px">
-        <div class="fin-bal-lbl">🏦 Caixa Total em Conta</div>
-        <div class="fin-bal-val" id="fin-bal-total">R$ 0,00</div>
-      </div>
+    <!-- ── SUB-ABAS DO FINANCEIRO ── -->
+    <div class="fin-subtabs" id="fin-subtabs">
+      <button class="fin-subtab active" data-sub="overview" onclick="finSubTab('overview')">📊 Visão Geral</button>
+      <button class="fin-subtab" data-sub="fees" onclick="finSubTab('fees')">💳 Mensalidades</button>
+      <button class="fin-subtab" data-sub="entries" onclick="finSubTab('entries')">📒 Lançamentos</button>
+      <button class="fin-subtab" data-sub="recur" onclick="finSubTab('recur')">🔁 Recorrências</button>
+      <button class="fin-subtab" data-sub="people" onclick="finSubTab('people')">👤 Pessoas</button>
+      <button class="fin-subtab" data-sub="chur" onclick="finSubTab('chur')">🍖 Churrasco</button>
     </div>
 
-    <!-- ── RESUMO DE PENDÊNCIAS DO MÊS EM EXIBIÇÃO (só aparece se houver algo em aberto) ── -->
-    <div class="fin-pending-summary" id="fin-pending-summary" style="display:none"></div>
+    <!-- ════ VISÃO GERAL ════ -->
+    <div class="fin-sub active" id="fin-sub-overview">
 
-    <!-- ── KPIs: Entradas / Saídas / Saldo do Mês ── -->
-    <div class="fin-kpi-row">
-      <div class="fin-kpi fin-kpi-in">
-        <div class="fin-kpi-lbl">💵 Entradas</div>
-        <div class="fin-kpi-val" id="fin-kpi-in">R$ 0,00</div>
-      </div>
-      <div class="fin-kpi fin-kpi-out">
-        <div class="fin-kpi-lbl">📤 Saídas</div>
-        <div class="fin-kpi-val" id="fin-kpi-out">R$ 0,00</div>
-      </div>
-      <div class="fin-kpi fin-kpi-bal" id="fin-kpi-bal-card">
-        <div class="fin-kpi-lbl">📅 Saldo Mês</div>
-        <div class="fin-kpi-val" id="fin-kpi-bal">R$ 0,00</div>
-      </div>
-    </div>
-
-    <!-- ── MENSALIDADES ── -->
-    <div class="section-label">
-      💳 Mensalidades
-      <span style="margin-left:auto;font-size:10px;color:var(--muted);letter-spacing:0">
-        R$ <input id="fin-fee-val" type="number" min="1" max="999" step="1"
-          style="width:46px;background:var(--surface2);border:1px solid var(--border);color:var(--gold);
-                 border-radius:4px;padding:2px 4px;font-size:10px;font-weight:700;text-align:center;"
-          onchange="finSetFeeValue(this.value)"> / jogador
-      </span>
-    </div>
-
-    <div class="fin-fee-grid" id="fin-fee-grid"></div>
-    <div id="fin-fee-stats" style="font-size:10px;color:var(--muted);margin:6px 2px 2px"></div>
-
-    <button class="btn btn-full wa-btn" style="margin-top:8px" onclick="finSendCobranca()">📤 Cobrar Pendentes p/ WhatsApp</button>
-
-    <!-- ── CONTAS A RECEBER (convidados e avulsos) ── -->
-    <div class="section-label" style="margin-top:16px">🤝 Convidados / Avulsos</div>
-    <div style="font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.5;padding:0 2px">
-      Use esta seção para cobranças pontuais — convidados que vieram nesta semana, reposições, etc. Não aparecem no elenco permanente.
-    </div>
-
-    <div class="add-form" style="margin-bottom:6px">
-      <input class="input-txt" id="fin-recv-name" type="text" placeholder="Nome do convidado" maxlength="30">
-      <input class="input-txt" id="fin-recv-val"  type="number" min="0" step="0.01"
-             placeholder="R$" style="width:72px;flex:none">
-      <button class="btn btn-gold" onclick="finAddRecv()">➕</button>
-    </div>
-
-    <div id="fin-recv-list"></div>
-    <div class="section-label" style="margin-top:16px">📤 Contas a Pagar do Mês</div>
-    <div style="font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.5;padding:0 2px">
-      Toda conta nasce como provisão (⏳) e só entra no saldo quando você tocar nela para marcar como paga (✓).
-    </div>
-
-    <div class="add-form fin-exp-form" style="margin-bottom:8px">
-      <input class="input-txt" id="fin-exp-desc" type="text" placeholder="Descrição (ex: Ordem Quadra)" maxlength="40">
-      <div class="fin-exp-form-row2">
-        <select class="input-txt" id="fin-exp-cat"></select>
-        <input class="input-txt" id="fin-exp-val" type="number" min="0" step="0.01" placeholder="R$">
-        <button class="btn btn-gold" onclick="finAddExpense()">➕</button>
-      </div>
-    </div>
-
-    <div id="fin-exp-list"></div>
-
-    <!-- ── RELATÓRIO ANUAL (colapsável — fechado por padrão) ── -->
-    <div class="fin-collapse-toggle" onclick="finToggleCollapse(this)">
-      📊 Resumo Anual 2026
-      <span class="fin-collapse-arrow">▾</span>
-    </div>
-    <div class="fin-collapse-body">
-      <div class="fin-chart-wrap">
-        <div id="fin-chart"></div>
-        <div class="fin-chart-legend">
-          <span><span class="fin-chart-dot" style="background:#3DBE6B"></span>Saldo positivo</span>
-          <span><span class="fin-chart-dot" style="background:var(--red)"></span>Saldo negativo</span>
+      <!-- ── CAIXA TOTAL (banner único no topo) ── -->
+      <div class="fin-balance-banner" id="fin-balance-banner">
+        <div class="fin-bal-item" style="padding:14px 16px">
+          <div class="fin-bal-lbl">🏦 Caixa Total em Conta</div>
+          <div class="fin-bal-val" id="fin-bal-total">R$ 0,00</div>
         </div>
       </div>
-      <div id="fin-annual-table"></div>
-    </div>
 
-    <!-- ── ENVIAR RELATÓRIO ── -->
-    <button class="btn btn-full wa-btn" style="margin-top:16px;margin-bottom:4px" onclick="finSendWA()">
-      📤 Enviar Fechamento p/ WhatsApp
-    </button>
+      <!-- ── RESUMO DE PENDÊNCIAS DO MÊS EM EXIBIÇÃO (só aparece se houver algo em aberto) ── -->
+      <div class="fin-pending-summary" id="fin-pending-summary" style="display:none"></div>
 
-    <!-- ── BACKUP E SEGURANÇA (colapsável — sync em nuvem já é automático) ── -->
-    <div class="fin-collapse-toggle" onclick="finToggleCollapse(this)">
-      💾 Backup e Segurança
-      <span class="fin-collapse-arrow">▾</span>
-    </div>
-    <div class="fin-collapse-body">
-      <div class="fin-backup-hint">
-        Seus dados já sincronizam automaticamente na nuvem (Firebase). Use a exportação manual apenas como cópia extra de segurança — por exemplo, antes de trocar de aparelho ou navegador.
+      <!-- ── KPIs do mês em exibição ── -->
+      <div class="fin-kpi-row">
+        <div class="fin-kpi fin-kpi-in">
+          <div class="fin-kpi-lbl">💵 Recebido</div>
+          <div class="fin-kpi-val" id="fin-kpi-in">R$ 0,00</div>
+        </div>
+        <div class="fin-kpi fin-kpi-out">
+          <div class="fin-kpi-lbl">📤 Pago</div>
+          <div class="fin-kpi-val" id="fin-kpi-out">R$ 0,00</div>
+        </div>
+        <div class="fin-kpi fin-kpi-bal" id="fin-kpi-bal-card">
+          <div class="fin-kpi-lbl">📅 Saldo Mês</div>
+          <div class="fin-kpi-val" id="fin-kpi-bal">R$ 0,00</div>
+        </div>
+        <div class="fin-kpi fin-kpi-recv">
+          <div class="fin-kpi-lbl">⏳ A Receber</div>
+          <div class="fin-kpi-val" id="fin-kpi-recv">R$ 0,00</div>
+          <div class="fin-kpi-sub" id="fin-kpi-recv-sub"></div>
+        </div>
+        <div class="fin-kpi fin-kpi-pay">
+          <div class="fin-kpi-lbl">🧾 A Pagar</div>
+          <div class="fin-kpi-val" id="fin-kpi-pay">R$ 0,00</div>
+          <div class="fin-kpi-sub" id="fin-kpi-pay-sub"></div>
+        </div>
+        <div class="fin-kpi fin-kpi-over" id="fin-kpi-over-card">
+          <div class="fin-kpi-lbl">⚠️ Vencido</div>
+          <div class="fin-kpi-val" id="fin-kpi-over">R$ 0,00</div>
+          <div class="fin-kpi-sub" id="fin-kpi-over-sub"></div>
+        </div>
       </div>
-      <div class="action-row">
-        <button class="btn btn-outline btn-sm" onclick="backupExport()">📥 Exportar Backup</button>
-        <button class="btn btn-ghost btn-sm" onclick="backupImportTrigger()">📤 Importar Backup</button>
+
+      <!-- ── RELATÓRIO ANUAL (colapsável — fechado por padrão) ── -->
+      <div class="fin-collapse-toggle" onclick="finToggleCollapse(this)">
+        <span id="fin-annual-title">📊 Resumo Anual 2026</span>
+        <span class="fin-collapse-arrow">▾</span>
       </div>
-      <input type="file" id="backup-file-input" accept="application/json" style="display:none" onchange="backupImportFile(event)">
+      <div class="fin-collapse-body">
+        <div class="fin-chart-wrap">
+          <div id="fin-chart"></div>
+          <div class="fin-chart-legend">
+            <span><span class="fin-chart-dot" style="background:#3DBE6B"></span>Saldo positivo</span>
+            <span><span class="fin-chart-dot" style="background:var(--red)"></span>Saldo negativo</span>
+          </div>
+        </div>
+        <div id="fin-annual-table"></div>
+      </div>
+
+      <!-- ── ENVIAR RELATÓRIO ── -->
+      <button class="btn btn-full wa-btn" style="margin-top:16px;margin-bottom:4px" onclick="finSendWA()">
+        📤 Enviar Fechamento p/ WhatsApp
+      </button>
+
+      <!-- ── BACKUP E SEGURANÇA (colapsável — sync em nuvem já é automático) ── -->
+      <div class="fin-collapse-toggle" onclick="finToggleCollapse(this)">
+        💾 Backup e Segurança
+        <span class="fin-collapse-arrow">▾</span>
+      </div>
+      <div class="fin-collapse-body">
+        <div class="fin-backup-hint">
+          Seus dados já sincronizam automaticamente na nuvem (Firebase). Use a exportação manual apenas como cópia extra de segurança — por exemplo, antes de trocar de aparelho ou navegador.
+        </div>
+        <div class="action-row">
+          <button class="btn btn-outline btn-sm" onclick="backupExport()">📥 Exportar Backup</button>
+          <button class="btn btn-ghost btn-sm" onclick="backupImportTrigger()">📤 Importar Backup</button>
+        </div>
+        <input type="file" id="backup-file-input" accept="application/json" style="display:none" onchange="backupImportFile(event)">
+      </div>
     </div>
 
+    <!-- ════ MENSALIDADES ════ -->
+    <div class="fin-sub" id="fin-sub-fees">
+      <div class="section-label">💳 Mensalidades</div>
+      <div class="fin-fee-config">
+        <label>Valor padrão R$
+          <input id="fin-fee-val" type="number" min="1" max="999" step="1" class="fin-mini-input"
+            onchange="finSetFeeValue(this.value)">
+        </label>
+        <label>Vence dia
+          <input id="fin-fee-due" type="number" min="1" max="31" step="1" class="fin-mini-input" placeholder="fim"
+            onchange="finSetFeeDueDay(this.value)">
+        </label>
+      </div>
+      <div class="fin-hint">
+        Toque no nome para marcar como pago. Cada pessoa só pode ter <b>uma</b> mensalidade por mês — o valor fica gravado no momento do pagamento.
+        Mensalidade individual e mês de ingresso ficam em <b>Pessoas</b>.
+      </div>
+
+      <div class="fin-fee-grid" id="fin-fee-grid"></div>
+      <div id="fin-fee-stats" style="font-size:10px;color:var(--muted);margin:6px 2px 2px"></div>
+
+      <button class="btn btn-full wa-btn" style="margin-top:8px" onclick="finSendCobranca()">📤 Cobrar Pendentes p/ WhatsApp</button>
+    </div>
+
+    <!-- ════ LANÇAMENTOS ════ -->
+    <div class="fin-sub" id="fin-sub-entries">
+      <!-- ── CONTAS A RECEBER (convidados e avulsos) ── -->
+      <div class="section-label">🤝 Receitas Avulsas / Convidados</div>
+      <div class="fin-hint">
+        Cobranças pontuais — convidados, reposições, patrocínio etc. Mensalistas devem ser cobrados em <b>Mensalidades</b> (evita cobrança em dobro).
+      </div>
+
+      <div class="add-form fin-exp-form" style="margin-bottom:6px">
+        <input class="input-txt" id="fin-recv-name" type="text" placeholder="Nome / apelido ou descrição" maxlength="40" list="fin-people-list">
+        <div class="fin-exp-form-row2">
+          <input class="input-txt" id="fin-recv-due" type="date" title="Vencimento (opcional — vazio = fim do mês)" style="flex:1 1 0">
+          <input class="input-txt" id="fin-recv-val" type="number" min="0" step="0.01" placeholder="R$" style="flex:0 0 80px">
+          <button class="btn btn-gold" onclick="finAddRecv()">➕</button>
+        </div>
+      </div>
+
+      <div id="fin-recv-list"></div>
+
+      <div class="section-label" style="margin-top:16px">📤 Contas a Pagar</div>
+      <div class="fin-hint">
+        Toda conta nasce como provisão (⏳) e só entra no saldo quando você tocar nela para marcar como paga (✓). Passou do vencimento sem pagar → ⚠️ vencida.
+      </div>
+
+      <div class="add-form fin-exp-form" style="margin-bottom:8px">
+        <input class="input-txt" id="fin-exp-desc" type="text" placeholder="Descrição (ex: Ordem Quadra)" maxlength="40">
+        <div class="fin-exp-form-row2">
+          <select class="input-txt" id="fin-exp-cat"></select>
+          <input class="input-txt" id="fin-exp-due" type="date" title="Vencimento (opcional — vazio = fim do mês)" style="flex:1 1 0">
+          <input class="input-txt" id="fin-exp-val" type="number" min="0" step="0.01" placeholder="R$">
+          <button class="btn btn-gold" onclick="finAddExpense()">➕</button>
+        </div>
+      </div>
+
+      <div id="fin-exp-list"></div>
+    </div>
+
+    <!-- ════ RECORRÊNCIAS ════ -->
+    <div class="fin-sub" id="fin-sub-recur">
+      <div class="section-label" id="rec-form-title">🔁 Nova Recorrência</div>
+      <div class="fin-hint">
+        Os lançamentos são gerados automaticamente até o mês atual quando o administrador abre o app — cada ocorrência é criada <b>uma única vez</b>, mesmo abrindo em vários aparelhos.
+      </div>
+      <div class="rec-form">
+        <input type="hidden" id="rec-id">
+        <div class="rec-row">
+          <select class="input-txt" id="rec-kind" onchange="recFormKindChange()">
+            <option value="out">📤 Despesa</option>
+            <option value="in">📥 Receita</option>
+          </select>
+          <input class="input-txt" id="rec-desc" type="text" maxlength="40" placeholder="Descrição (ex: Aluguel da quadra)">
+        </div>
+        <div class="rec-row">
+          <input class="input-txt" id="rec-val" type="number" min="0" step="0.01" placeholder="Valor R$">
+          <select class="input-txt" id="rec-cat"></select>
+          <input class="input-txt" id="rec-person" type="text" maxlength="30" placeholder="Pessoa (opcional)" list="fin-people-list" style="display:none">
+        </div>
+        <div class="rec-row">
+          <select class="input-txt" id="rec-freq" onchange="recFormFreqChange()">
+            <option value="monthly">Mensal</option>
+            <option value="weekly">Semanal</option>
+            <option value="yearly">Anual</option>
+          </select>
+          <input class="input-txt" id="rec-day" type="number" min="1" max="31" placeholder="Dia venc.">
+          <select class="input-txt" id="rec-weekday" style="display:none">
+            <option value="0">Domingo</option><option value="1">Segunda</option><option value="2">Terça</option>
+            <option value="3">Quarta</option><option value="4">Quinta</option><option value="5" selected>Sexta</option><option value="6">Sábado</option>
+          </select>
+          <select class="input-txt" id="rec-month" style="display:none"></select>
+        </div>
+        <div class="rec-row">
+          <label class="rec-lbl">Início<input class="input-txt" id="rec-start" type="date"></label>
+          <label class="rec-lbl">Fim (opcional)<input class="input-txt" id="rec-end" type="date"></label>
+        </div>
+        <div class="rec-row">
+          <button class="btn btn-gold" style="flex:1" id="rec-save-btn" onclick="recSave()">➕ Criar Recorrência</button>
+          <button class="btn btn-ghost" id="rec-cancel-btn" style="display:none" onclick="recFormReset()">Cancelar</button>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top:16px">📋 Recorrências</div>
+      <div id="rec-list"></div>
+    </div>
+
+    <!-- ════ PESSOAS ════ -->
+    <div class="fin-sub" id="fin-sub-people">
+      <div class="section-label">👤 Nova Pessoa</div>
+      <div class="fin-hint">
+        Basta o nome ou apelido. Jogadores do Elenco já aparecem aqui automaticamente. Use para convidados frequentes, sócios ou quem paga sem jogar.
+      </div>
+      <div class="add-form">
+        <input class="input-txt" id="pp-new-name" type="text" maxlength="30" placeholder="Nome ou apelido"
+          onkeydown="if(event.key==='Enter')ppAdd()">
+        <button class="btn btn-gold" onclick="ppAdd()">➕</button>
+      </div>
+      <div class="section-label">Pessoas <span class="cnt" id="pp-count">0</span></div>
+      <div id="pp-list"></div>
+    </div>
+
+    <!-- ════ CHURRASCO ════ -->
+    <div class="fin-sub" id="fin-sub-chur">
+     <div id="chur-content">
+      <div class="section-label">🍖 Novo Churrasco</div>
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.5;padding:0 2px">
+        Registre a data, o valor total gasto e adicione quem ficou. O rateio é calculado automaticamente.
+      </div>
+
+      <div class="add-form" style="margin-bottom:6px;flex-wrap:wrap">
+        <input class="input-txt" id="chur-date" type="date" style="flex:1;min-width:120px">
+        <input class="input-txt" id="chur-desc" type="text" placeholder="Descrição (opcional)" maxlength="40" style="flex:2;min-width:140px">
+        <input class="input-txt" id="chur-total" type="number" min="0" step="0.01" placeholder="R$ total" style="width:90px;flex:none">
+        <button class="btn btn-gold" onclick="churCreate()">➕ Criar</button>
+      </div>
+
+      <div class="section-label" style="margin-top:16px">📋 Churrascos</div>
+      <div id="chur-list"></div>
+      <datalist id="chur-players-list"></datalist>
+     </div>
+    </div>
+
+    <datalist id="fin-people-list"></datalist>
   </div>
 
-  <!-- CHURRASCO -->
-  <div id="tab-chur" class="tab-panel">
-
-    <div class="section-label">🍖 Novo Churrasco</div>
-    <div style="font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.5;padding:0 2px">
-      Registre a data, o valor total gasto e adicione quem ficou. O rateio é calculado automaticamente.
-    </div>
-
-    <div class="add-form" style="margin-bottom:6px;flex-wrap:wrap">
-      <input class="input-txt" id="chur-date" type="date" style="flex:1;min-width:120px">
-      <input class="input-txt" id="chur-desc" type="text" placeholder="Descrição (opcional)" maxlength="40" style="flex:2;min-width:140px">
-      <input class="input-txt" id="chur-total" type="number" min="0" step="0.01" placeholder="R$ total" style="width:90px;flex:none">
-      <button class="btn btn-gold" onclick="churCreate()">➕ Criar</button>
-    </div>
-
-    <div class="section-label" style="margin-top:16px">📋 Churrascos</div>
-    <div id="chur-list"></div>
-    <datalist id="chur-players-list"></datalist>
-
-  </div>
+  <!-- CHURRASCO (aba do jogador — o conteúdo é o mesmo bloco #chur-content) -->
+  <div id="tab-chur" class="tab-panel"></div>
 
 </main>
 
@@ -1772,6 +1960,12 @@ textarea.wa-preview:focus { border-color:var(--gold); }
         <div class="fin-modal-field-sm" id="fin-modal-val-wrap">
           <label>Valor (R$)</label>
           <input class="input-txt" id="fin-modal-val" type="number" min="0" step="0.01" placeholder="0,00">
+        </div>
+      </div>
+      <div class="fin-modal-row">
+        <div class="fin-modal-field">
+          <label>Vencimento <span style="color:var(--muted);font-weight:400">— vazio = fim do mês</span></label>
+          <input class="input-txt" id="fin-modal-due" type="date">
         </div>
       </div>
       <div class="fin-modal-row" id="fin-modal-cat-wrap" style="display:none">
@@ -1803,16 +1997,6 @@ textarea.wa-preview:focus { border-color:var(--gold); }
           placeholder="Nome do jogador"
           onkeydown="if(event.key==='Enter')saveEditPlayer()">
       </div>
-      <div class="fin-modal-field" id="ep-fee-wrap">
-        <label>Mensalidade individual (R$) <span style="color:var(--muted);font-weight:400">— em branco = valor padrão do mês</span></label>
-        <input class="input-txt" id="ep-fee" type="number" min="0" step="0.01" placeholder="Valor padrão">
-      </div>
-      <div class="fin-modal-field" id="ep-joined-wrap">
-        <label>Mês de ingresso <span style="color:var(--muted);font-weight:400">— em branco = elenco histórico (sempre ativo)</span></label>
-        <input class="input-txt" id="ep-joined" type="month">
-        <button type="button" class="btn btn-ghost" style="margin-top:6px;width:100%;font-size:12px"
-          onclick="document.getElementById('ep-joined').value=''">🗑️ Limpar (tratar como histórico)</button>
-      </div>
       <div class="fin-modal-field">
         <label>Nível / Posição</label>
         <select class="sel-small" id="ep-level" style="width:100%;padding:9px 12px;font-size:13px;border-radius:var(--radius-sm)" onchange="epLevelChange(this.value)">
@@ -1827,6 +2011,42 @@ textarea.wa-preview:focus { border-color:var(--gold); }
     <div class="fin-modal-actions" style="margin-top:16px">
       <button class="btn btn-gold" style="flex:1" onclick="saveEditPlayer()">💾 Salvar</button>
       <button class="btn btn-ghost" onclick="closeEditPlayer()">Cancelar</button>
+    </div>
+  </div>
+</div>
+<!-- ═══ PERSON EDIT MODAL (Financeiro › Pessoas) ═══════════════ -->
+<div id="pp-modal-overlay" class="fin-modal-overlay" style="display:none" onclick="if(event.target===this)ppClose()">
+  <div class="fin-modal" onclick="event.stopPropagation()">
+    <div class="fin-modal-title">
+      <span>👤 Editar Pessoa</span>
+      <button class="fin-modal-close" onclick="ppClose()">✕</button>
+    </div>
+    <div class="fin-modal-row" style="flex-direction:column;gap:12px">
+      <div class="fin-modal-field">
+        <label>Nome ou apelido</label>
+        <input class="input-txt" id="pp-name" type="text" maxlength="30" style="width:100%">
+        <div class="fin-hint" id="pp-name-hint" style="margin:4px 0 0">Vinculado ao Elenco — o nome é alterado lá.</div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--white)">
+        <input type="checkbox" id="pp-mensalista"> 💳 Paga mensalidade (mensalista)
+      </label>
+      <div class="fin-hint" id="pp-mens-hint" style="margin:-6px 0 0">Definido pelo Elenco: convidado 🤝 não paga mensalidade.</div>
+      <div class="fin-modal-field">
+        <label>Mensalidade individual (R$) <span style="color:var(--muted);font-weight:400">— em branco = valor padrão do mês</span></label>
+        <input class="input-txt" id="pp-fee" type="number" min="0" step="0.01" placeholder="Valor padrão" style="width:100%">
+      </div>
+      <div class="fin-modal-field">
+        <label>Mês de ingresso <span style="color:var(--muted);font-weight:400">— em branco = sempre ativo</span></label>
+        <input class="input-txt" id="pp-joined" type="month" style="width:100%">
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--white)">
+        <input type="checkbox" id="pp-active"> ✅ Ativo (entra nas cobranças)
+      </label>
+    </div>
+    <div class="fin-modal-actions" style="margin-top:16px">
+      <button class="btn btn-gold" style="flex:1" onclick="ppSave()">💾 Salvar</button>
+      <button class="btn btn-danger" id="pp-del-btn" onclick="ppDelete()">🗑</button>
+      <button class="btn btn-ghost" onclick="ppClose()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -1991,7 +2211,7 @@ let lastDraw=null;
 // ─── TABS ────────────────────────────────────────────────────
 function switchTab(tab,btn){
   // Jogador não tem acesso a nenhuma função financeira, mesmo via console/URL
-  if((tab==='fin' || tab==='chur') && currentRole==='player'){
+  if(tab==='fin' && currentRole==='player'){
     toast('⛔ Acesso restrito.');
     return;
   }
@@ -2300,8 +2520,12 @@ function finDefaultData(){
 function finLoad(){ try{ const r=localStorage.getItem(FIN_KEY); if(r)return JSON.parse(r); }catch(e){} return null; }
 function finSave(d){
   localStorage.setItem(FIN_KEY, JSON.stringify(d));
-  fbPush('finData', d);
+  // Só o Administrador grava o Financeiro na nuvem — o jogador nunca deve
+  // sobrescrever o finData compartilhado com uma cópia local desatualizada.
+  if(finIsAdmin()) fbPush('finData', d);
 }
+// currentRole é declarado no último <script>; typeof evita erro durante a carga.
+function finIsAdmin(){ return typeof currentRole !== 'undefined' && currentRole === 'admin'; }
 function finMigrate(data){
   // Migração v2: remove recvs duplicados/incorretos criados automaticamente.
   // Um recv foi criado incorretamente se:
@@ -2334,10 +2558,44 @@ function finInit(){
   const s = finLoad();
   if(s){
     const migrated = finMigrate(s);
+    finUpgradeV2(migrated);
     finSave(migrated);
     return migrated;
   }
-  return finDefaultData();
+  const d = finDefaultData();
+  finUpgradeV2(d);
+  return d;
+}
+
+// ─── MIGRAÇÃO v2 (segura e só aditiva) ────────────────────────
+// • Antes de migrar, guarda uma cópia intacta do formato antigo no localStorage.
+// • Nunca apaga campos antigos: `paid` (nomes), `recvs`, `expenses` continuam lá,
+//   então uma versão anterior do app continua lendo os mesmos dados.
+// • Acrescenta: people (cadastro de pessoas), months[k].fees (mensalidade por
+//   pessoa com valor CONGELADO), recurrences, recDone e feeDueDay.
+const FIN_SCHEMA = 2;
+const FIN_PRE_V2_BACKUP_KEY = 'ufg_fin_v6_backup_pre_v2';
+function finUpgradeV2(d){
+  if(!d || !d.months) return false;
+  const isOld = (d.schemaVersion||1) < FIN_SCHEMA;
+  if(isOld){
+    try{
+      if(!localStorage.getItem(FIN_PRE_V2_BACKUP_KEY)){
+        localStorage.setItem(FIN_PRE_V2_BACKUP_KEY, JSON.stringify({ savedAt:new Date().toISOString(), finData:d, players }));
+      }
+    }catch(e){}
+  }
+  if(!Array.isArray(d.people)) d.people = [];
+  if(!d.personNextId) d.personNextId = 1;
+  if(!Array.isArray(d.recurrences)) d.recurrences = [];
+  if(!d.recNextId) d.recNextId = 1;
+  if(!d.recDone || typeof d.recDone !== 'object') d.recDone = {};
+  if(d.feeDueDay === undefined) d.feeDueDay = null; // null = último dia do mês
+  d.schemaVersion = FIN_SCHEMA;
+  const before = isOld ? '' : JSON.stringify(d);
+  finEnsurePeople(d);
+  finReconcileFees(d);
+  return isOld || JSON.stringify(d) !== before;
 }
 
 let finData   = finInit();
@@ -2395,15 +2653,253 @@ function finPlayerActiveIn(p, y, m){
 }
 
 function finMonthData(){
-  const k = finKey(finYear, finMonth);
-  if(!finData.months[k]){
-    finData.months[k] = { feeValue: finData.feeValue, expenses:[], paid:[], recvs:[], expNextId:1, recvNextId:1 };
+  return finMonthDataOf(finData, finYear, finMonth);
+}
+function finMonthDataOf(d, y, m){
+  const k = finKey(y, m);
+  if(!d.months[k]){
+    d.months[k] = { feeValue: d.feeValue, expenses:[], paid:[], recvs:[], expNextId:1, recvNextId:1, fees:{} };
   }
   // Back-compat: add recvs if missing
-  const md = finData.months[k];
+  const md = d.months[k];
   if(!md.recvs) md.recvs = [];
-  if(!md.recvNextId) md.recvNextId = 1;
+  if(!md.expenses) md.expenses = [];
+  if(!md.paid) md.paid = [];
+  if(!md.fees || typeof md.fees !== 'object') md.fees = {};
+  // Garante ids sempre à frente dos existentes (evita id repetido após edições antigas)
+  md.recvNextId = Math.max(md.recvNextId||1, ...md.recvs.map(r=>(r.id||0)+1));
+  md.expNextId  = Math.max(md.expNextId||1,  ...md.expenses.map(e=>(e.id||0)+1));
   return md;
+}
+
+// ─── DATAS E VENCIMENTOS ──────────────────────────────────────
+// Sem vencimento informado, vale o último dia do mês do lançamento — mesmo
+// critério de "vencido" que o app já usava (virou o mês sem pagar).
+function finISO(dt){
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+function finTodayISO(){ return finISO(new Date()); }
+function finDaysIn(y, m){ return new Date(y, m+1, 0).getDate(); }
+function finDayISO(y, m, day){ return finISO(new Date(y, m, Math.min(Math.max(1, Number(day)||1), finDaysIn(y, m)))); }
+function finLastDayISO(y, m){ return finDayISO(y, m, 31); }
+function finFmtDate(iso){ if(!iso) return ''; const p = iso.split('-'); return `${p[2]}/${p[1]}`; }
+function finYMFromISO(iso){ const p = iso.split('-').map(Number); return { y:p[0], m:p[1]-1 }; }
+function finParseKey(k){ const p = k.split('-').map(Number); return { y:p[0], m:p[1] }; }
+function finFeeDueISO(y, m){ return finData.feeDueDay ? finDayISO(y, m, finData.feeDueDay) : finLastDayISO(y, m); }
+function finEntryDueISO(e, y, m){ return e.due || finLastDayISO(y, m); }
+function finStatus(paid, dueISO){ return paid ? 'paid' : (dueISO < finTodayISO() ? 'overdue' : 'pending'); }
+
+// ─── PESSOAS (cadastro simples: nome ou apelido) ─────────────
+// Cada jogador do Elenco tem uma pessoa vinculada (playerId). O nome exibido
+// é sempre o do Elenco, então renomear um jogador não quebra o histórico.
+function finPeopleOf(d){ return ((d || finData).people) || []; }
+function personById(id, d){ return finPeopleOf(d).find(p => p.id === id) || null; }
+function personPlayer(pp){ return (pp && pp.playerId != null) ? (players.find(x => x.id === pp.playerId) || null) : null; }
+function personName(pp){ const pl = personPlayer(pp); return pl ? pl.name : (pp ? pp.name : ''); }
+function personByName(name, d){
+  if(!name) return null;
+  const n = String(name).trim(), low = n.toLowerCase(), list = finPeopleOf(d);
+  return list.find(p => personName(p) === n) || list.find(p => p.name === n)
+      || list.find(p => personName(p).toLowerCase() === low) || null;
+}
+// Mensalista = quem paga mensalidade. Quem está no Elenco segue o Elenco
+// (convidado não paga; quem saiu do elenco deixa de ser cobrado).
+function personIsMensalista(pp){
+  if(!pp || pp.active === false) return false;
+  if(pp.playerId != null){ const pl = personPlayer(pp); return !!pl && !pl.isGuest; }
+  return !!pp.mensalista;
+}
+function personActiveIn(pp, y, m){
+  if(pp.joinedY == null || pp.joinedM == null) return true;
+  return finMonthIdx(y, m) >= finMonthIdx(pp.joinedY, pp.joinedM);
+}
+function personFee(pp, dfv){ return (pp && pp.customFee != null && pp.customFee > 0) ? pp.customFee : (dfv || 15); }
+function finMensalistas(y, m){
+  return finPeopleOf().filter(pp => personIsMensalista(pp) && personActiveIn(pp, y, m))
+    .sort((a,b) => personName(a).localeCompare(personName(b)));
+}
+function finIsFeePaid(md, pp){ return !!(md && md.fees && md.fees[pp.id]); }
+function finFeesIn(md){ return md && md.fees ? Object.values(md.fees).reduce((s,f) => s + (Number(f.val)||0), 0) : 0; }
+
+// Cria/vincula uma pessoa para cada jogador do Elenco e propaga renomeações
+// para o histórico de mensalidades (array `paid`, mantido por compatibilidade).
+function finEnsurePeople(d){
+  const list = d.people;
+  players.forEach(pl => {
+    let pp = list.find(p => p.playerId === pl.id);
+    if(!pp){
+      pp = list.find(p => (p.playerId == null || !players.some(x => x.id === p.playerId))
+                        && p.name.toLowerCase() === pl.name.toLowerCase());
+      if(pp){ pp.playerId = pl.id; }
+      else {
+        pp = { id: d.personNextId++, name: pl.name, playerId: pl.id, mensalista: !pl.isGuest, active: true,
+               customFee: (pl.customFee != null && pl.customFee > 0) ? pl.customFee : null,
+               joinedY: pl.joinedY ?? null, joinedM: pl.joinedM ?? null };
+        list.push(pp);
+      }
+    }
+    if(pp.name !== pl.name){
+      finRenameInPaid(d, pp.name, pl.name);
+      pp.name = pl.name;
+    }
+  });
+}
+function finRenameInPaid(d, oldName, newName){
+  Object.values(d.months).forEach(md => {
+    if(!md || !Array.isArray(md.paid) || !md.paid.includes(oldName)) return;
+    md.paid = [...new Set(md.paid.map(n => n === oldName ? newName : n))];
+  });
+}
+
+// `paid` (nomes) continua sendo a lista de quem pagou — compatível com a
+// versão anterior. `fees` guarda o VALOR CONGELADO de cada pagamento por pessoa,
+// então mudar a mensalidade de alguém hoje não altera meses já fechados.
+function finReconcileFees(d){
+  Object.keys(d.months).forEach(k => {
+    const md = d.months[k];
+    if(!md) return;
+    if(!Array.isArray(md.paid)) md.paid = [];
+    if(!md.fees || typeof md.fees !== 'object') md.fees = {};
+    const fv = md.feeValue || 15;
+    const seen = new Set();
+    md.paid.forEach(name => {
+      let pp = personByName(name, d);
+      if(!pp){
+        // Nome histórico sem jogador atual (ex.: saiu do elenco): preserva o valor recebido.
+        pp = { id: d.personNextId++, name, playerId: null, mensalista: false, active: false,
+               customFee: null, joinedY: null, joinedM: null, legacy: true };
+        d.people.push(pp);
+      }
+      seen.add(String(pp.id));
+      if(!md.fees[pp.id]){
+        const pl = personPlayer(pp);
+        md.fees[pp.id] = { val: (pl && pl.isGuest) ? 0 : personFee(pp, fv), paidAt: null };
+      }
+    });
+    Object.keys(md.fees).forEach(id => { if(!seen.has(String(id))) delete md.fees[id]; });
+  });
+}
+
+// Normaliza tudo (pessoas, mensalidades, recorrências). Só o admin persiste.
+function finNormalize(){
+  const before = JSON.stringify(finData);
+  finUpgradeV2(finData);
+  finGenerateRecurrences(finData);
+  return JSON.stringify(finData) !== before;
+}
+
+// ─── RECORRÊNCIAS ─────────────────────────────────────────────
+// rec = { id, kind:'in'|'out', desc, val, cat, personId, freq:'monthly'|'weekly'|'yearly',
+//         day (dia do mês, ou dia da semana 0-6 no semanal), month (0-11, anual),
+//         start:'AAAA-MM-DD', end:'' , status:'active'|'paused'|'ended', pauses:[{from,to}] }
+// Cada ocorrência tem uma chave única (recId@data) gravada em recDone: é criada
+// uma única vez, e se for excluída manualmente não volta a aparecer.
+const REC_FREQ_LABEL = { monthly:'Mensal', weekly:'Semanal', yearly:'Anual' };
+const WEEKDAYS = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+function recInPause(rec, iso){ return (rec.pauses||[]).some(p => iso >= p.from && (!p.to || iso < p.to)); }
+function recKeyOf(rec, iso){ return `${rec.id}@${iso}`; }
+function recPeriodOf(freq, iso){
+  if(freq === 'yearly') return iso.slice(0, 4);
+  if(freq === 'weekly'){
+    const p = iso.split('-').map(Number), dt = new Date(p[0], p[1]-1, p[2]);
+    dt.setDate(dt.getDate() - ((dt.getDay() + 6) % 7)); // segunda-feira da semana
+    return finISO(dt);
+  }
+  return iso.slice(0, 7);
+}
+function recOccurrences(rec, untilISO){
+  const out = [];
+  if(!rec.start) return out;
+  const endISO = (rec.end && rec.end < untilISO) ? rec.end : untilISO;
+  const s = rec.start.split('-').map(Number);
+  let guard = 0;
+  if(rec.freq === 'weekly'){
+    const dt = new Date(s[0], s[1]-1, s[2]);
+    dt.setDate(dt.getDate() + (((Number(rec.day)||0) - dt.getDay() + 7) % 7));
+    while(finISO(dt) <= endISO && guard++ < 2000){ out.push(finISO(dt)); dt.setDate(dt.getDate() + 7); }
+  } else if(rec.freq === 'yearly'){
+    const mo = rec.month != null ? Number(rec.month) : s[1]-1;
+    for(let y = s[0]; guard++ < 200; y++){
+      const iso = finDayISO(y, mo, rec.day);
+      if(iso > endISO) break;
+      if(iso >= rec.start) out.push(iso);
+    }
+  } else {
+    let y = s[0], m = s[1]-1;
+    while(guard++ < 2400){
+      const iso = finDayISO(y, m, rec.day);
+      if(iso > endISO) break;
+      if(iso >= rec.start) out.push(iso);
+      if(++m > 11){ m = 0; y++; }
+    }
+  }
+  return out.filter(iso => !recInPause(rec, iso));
+}
+function recEntryLabel(rec, d){
+  const pp = rec.personId ? personById(rec.personId, d) : null;
+  return pp ? `${personName(pp)} · ${rec.desc}` : rec.desc;
+}
+// Gera os lançamentos pendentes até o fim do mês atual. Idempotente.
+function finGenerateRecurrences(d){
+  const now = new Date();
+  const until = finLastDayISO(now.getFullYear(), now.getMonth());
+  let created = 0;
+  (d.recurrences||[]).forEach(rec => {
+    if(rec.status === 'paused' && !(rec.pauses||[]).length) return;
+    // No máximo UM lançamento por período (mês/ano/semana) para cada recorrência,
+    // mesmo que ela tenha sido editada (ex.: mudou o dia de vencimento).
+    const field = rec.kind === 'in' ? 'recvs' : 'expenses';
+    const periods = new Set();
+    Object.keys(d.months).forEach(k => {
+      const md = d.months[k];
+      if(!md || !md[field]) return;
+      const { y, m } = finParseKey(k);
+      md[field].forEach(e => { if(e.recId === rec.id) periods.add(recPeriodOf(rec.freq, finEntryDueISO(e, y, m))); });
+    });
+    recOccurrences(rec, until).forEach(iso => {
+      const key = recKeyOf(rec, iso);
+      if(d.recDone[key]) return;
+      if(rec.genFrom && iso < rec.genFrom) return;
+      const period = recPeriodOf(rec.freq, iso);
+      if(periods.has(period)) return;
+      periods.add(period);
+      const { y, m } = finYMFromISO(iso);
+      const md = finMonthDataOf(d, y, m);
+      if(rec.kind === 'in'){
+        md.recvs.push({ id: md.recvNextId++, name: recEntryLabel(rec, d), val: Number(rec.val), paid: false,
+                        due: iso, recId: rec.id, recKey: key, personId: rec.personId || null });
+      } else {
+        md.expenses.push({ id: md.expNextId++, desc: rec.desc, val: Number(rec.val), paid: false,
+                           cat: rec.cat || 'Outros', due: iso, recId: rec.id, recKey: key });
+      }
+      d.recDone[key] = 1;
+      created++;
+    });
+  });
+  return created;
+}
+// Remove lançamentos AINDA NÃO PAGOS de uma recorrência a partir de uma data
+// (pagos nunca são tocados). Libera a chave para eventual regeneração.
+function recRemoveUnpaid(d, recId, fromISO){
+  let removed = 0;
+  Object.keys(d.months).forEach(k => {
+    const md = d.months[k];
+    if(!md) return;
+    const { y, m } = finParseKey(k);
+    const drop = e => e.recId === recId && !(e.paid === true) && finEntryDueISO(e, y, m) >= fromISO;
+    ['recvs','expenses'].forEach(field => {
+      if(!md[field]) return;
+      md[field] = md[field].filter(e => {
+        if(field === 'expenses' ? (drop(e) && !finIsExpPaid(e)) : drop(e)){
+          if(e.recKey) delete d.recDone[e.recKey];
+          removed++;
+          return false;
+        }
+        return true;
+      });
+    });
+  });
+  return removed;
 }
 
 // ─── NAVIGATION ───────────────────────────────────────────────
@@ -2420,15 +2916,32 @@ function finSetFeeValue(v){
   const val = parseFloat(v)||15;
   finMonthData().feeValue = val;
   finSave(finData);
-  renderFinKPIs();
+  renderFin();
+}
+
+// Dia de vencimento da mensalidade (vazio = último dia do mês)
+function finSetFeeDueDay(v){
+  const day = parseInt(v);
+  finData.feeDueDay = (day >= 1 && day <= 31) ? day : null;
+  finSave(finData);
+  renderFin();
 }
 
 // ─── TOGGLE PAYMENT ───────────────────────────────────────────
-function finTogglePaid(name){
-  const md  = finMonthData();
-  const idx = md.paid.indexOf(name);
-  if(idx >= 0) md.paid.splice(idx, 1);
-  else md.paid.push(name);
+// Uma mensalidade por pessoa por mês: a chave é o id da pessoa, então não
+// existe como lançar duas vezes. O valor é congelado no momento do pagamento.
+function finTogglePaid(personId){
+  const md = finMonthData();
+  const pp = personById(personId);
+  if(!pp) return;
+  const name = personName(pp);
+  if(md.fees[pp.id]){
+    delete md.fees[pp.id];
+    md.paid = md.paid.filter(n => n !== name);
+  } else {
+    md.fees[pp.id] = { val: personFee(pp, md.feeValue||15), paidAt: finTodayISO() };
+    if(!md.paid.includes(name)) md.paid.push(name);
+  }
   finSave(finData);
   // Sync player fee status to presence/roster tabs
   syncFeeStatus();
@@ -2437,18 +2950,23 @@ function finTogglePaid(name){
 
 // ─── SYNC: financial → player.fee ────────────────────────────
 // Rules:
-//   • A player is "pending" if they have NOT paid in the CURRENT month
-//   • A player is "ok" if they paid this month (or player not in list)
+//   • Só o Administrador grava este status (o jogador não tem o Financeiro
+//     atualizado e, antes, marcava todo mundo como pendente na nuvem).
+//   • Sempre usa o mês REAL atual, independente do mês navegado na tela.
+//   • "pending" = mensalista ativo que não pagou o mês atual; demais = "ok".
 function syncFeeStatus(){
-  const md    = finMonthData();
-  const now   = new Date();
-  const isCur = (finYear === now.getFullYear() && finMonth === now.getMonth());
-  // Only sync when viewing current month — historical months don't affect status
-  if(!isCur) return;
+  if(!finIsAdmin()) return;
+  const now = new Date();
+  const md  = finData.months[finKey(now.getFullYear(), now.getMonth())];
+  let changed = false;
   players.forEach(p => {
-    p.fee = md.paid.includes(p.name) ? 'ok' : 'pending';
+    const pp = finPeopleOf().find(x => x.playerId === p.id);
+    const owes = pp && personIsMensalista(pp) && personActiveIn(pp, now.getFullYear(), now.getMonth())
+                 && !finIsFeePaid(md, pp);
+    const fee = owes ? 'pending' : 'ok';
+    if(p.fee !== fee){ p.fee = fee; changed = true; }
   });
-  save(players);
+  if(changed) save(players);
   // Re-render presence if that tab is visible
   const presEl = document.getElementById('presence-list');
   if(presEl) renderPresence();
@@ -2461,27 +2979,43 @@ function syncFeeStatus(){
 function finAddRecv(){
   const name = document.getElementById('fin-recv-name').value.trim();
   const val  = parseFloat(document.getElementById('fin-recv-val').value)||0;
+  const due  = document.getElementById('fin-recv-due').value || null;
   if(!name || val <= 0){ toast('⚠️ Preencha nome e valor.'); return; }
-  const md = finMonthData();
-  md.recvs.push({ id: md.recvNextId++, name, val, paid: false });
-  finSave(finData);
-  document.getElementById('fin-recv-name').value = '';
-  document.getElementById('fin-recv-val').value  = '';
-  renderFin();
-  toast('✅ Convidado adicionado!');
+  const pp = personByName(name);
+  const doAdd = () => {
+    const md = finMonthData();
+    md.recvs.push({ id: md.recvNextId++, name: pp ? personName(pp) : name, val, paid: false,
+                    due, personId: pp ? pp.id : null });
+    finSave(finData);
+    document.getElementById('fin-recv-name').value = '';
+    document.getElementById('fin-recv-val').value  = '';
+    document.getElementById('fin-recv-due').value  = '';
+    renderFin();
+    toast('✅ Receita adicionada!');
+  };
+  // Proteção contra cobrança em dobro: mensalista já é cobrado em Mensalidades
+  if(pp && personIsMensalista(pp) && personActiveIn(pp, finYear, finMonth)){
+    finConfirm(
+      '⚠️ Possível cobrança duplicada',
+      `${personName(pp)} é mensalista e já é cobrado(a) em Mensalidades. Registrar esta receita avulsa mesmo assim? (Use só para valores extras, nunca para a mensalidade.)`,
+      doAdd, null, '➕ Registrar'
+    );
+    return;
+  }
+  doAdd();
 }
 
 function finToggleRecv(id){
   const md = finMonthData();
   const r  = md.recvs.find(x => x.id === id);
-  if(r) r.paid = !r.paid;
+  if(r){ r.paid = !r.paid; r.paidAt = r.paid ? finTodayISO() : null; }
   finSave(finData);
   renderFin();
 }
 
 function finDelRecv(id){
   finConfirm(
-    '🤝 Excluir convidado?',
+    '🤝 Excluir receita?',
     'Esta ação não pode ser desfeita.',
     () => {
       const md = finMonthData();
@@ -2499,12 +3033,14 @@ function finAddExpense(){
   const desc = document.getElementById('fin-exp-desc').value.trim();
   const val  = parseFloat(document.getElementById('fin-exp-val').value)||0;
   const cat  = document.getElementById('fin-exp-cat').value || 'Outros';
+  const due  = document.getElementById('fin-exp-due').value || null;
   if(!desc || val <= 0){ toast('⚠️ Preencha descrição e valor.'); return; }
   const md = finMonthData();
-  md.expenses.push({ id: md.expNextId++, desc, val, paid: false, cat });
+  md.expenses.push({ id: md.expNextId++, desc, val, paid: false, cat, due });
   finSave(finData);
   document.getElementById('fin-exp-desc').value = '';
   document.getElementById('fin-exp-val').value  = '';
+  document.getElementById('fin-exp-due').value  = '';
   renderFin();
   toast('✅ Conta a pagar adicionada (provisão)!');
 }
@@ -2514,7 +3050,7 @@ function finAddExpense(){
 function finToggleExpense(id){
   const md = finMonthData();
   const e  = md.expenses.find(x => x.id === id);
-  if(e) e.paid = !finIsExpPaid(e);
+  if(e){ e.paid = !finIsExpPaid(e); e.paidAt = e.paid ? finTodayISO() : null; }
   finSave(finData);
   renderFin();
 }
@@ -2533,6 +3069,16 @@ function finDelExpense(id){
   );
 }
 
+// ─── SUB-ABAS DO FINANCEIRO ───────────────────────────────────
+let finCurrentSub = 'overview';
+function finSubTab(sub){
+  finCurrentSub = sub;
+  document.querySelectorAll('.fin-subtab').forEach(b => b.classList.toggle('active', b.dataset.sub === sub));
+  document.querySelectorAll('.fin-sub').forEach(p => p.classList.toggle('active', p.id === 'fin-sub-'+sub));
+  if(sub === 'chur') renderChur();
+  fadeIn(document.getElementById('fin-sub-'+sub));
+}
+
 // ─── RENDER ───────────────────────────────────────────────────
 function renderFin(){
   // Month label
@@ -2545,13 +3091,17 @@ function renderFin(){
   renderFinRecv();
   renderFinExpenses();
   renderFinAnnual();
+  renderRecList();
+  renderPeople();
+  finPopulatePeopleDatalist();
   finUpdateTabBadge();
 
   // Keep fee input in sync
   document.getElementById('fin-fee-val').value = finMonthData().feeValue||15;
+  document.getElementById('fin-fee-due').value = finData.feeDueDay || '';
 }
 
-function finFmt(v){ return 'R$ ' + v.toFixed(2).replace('.',','); }
+function finFmt(v){ return 'R$ ' + (Number(v)||0).toFixed(2).replace('.',','); }
 
 // Popula um <select> de categoria a partir de EXP_CATEGORIES (fonte única)
 function finPopulateCatSelect(id, selected){
@@ -2559,6 +3109,19 @@ function finPopulateCatSelect(id, selected){
   if(!sel) return;
   sel.innerHTML = EXP_CATEGORIES.map(c =>
     `<option value="${c}" ${c===selected?'selected':''}>${c}</option>`).join('');
+}
+
+// Lista de pessoas para autocompletar (receitas avulsas e recorrências)
+function finPopulatePeopleDatalist(){
+  const dl = document.getElementById('fin-people-list');
+  if(!dl) return;
+  const names = [...new Set(finPeopleOf().filter(p => p.active !== false).map(personName))]
+    .sort((a,b) => a.localeCompare(b));
+  dl.innerHTML = names.map(n => `<option value="${finEsc(n)}">`).join('');
+}
+
+function finEsc(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 // Uma despesa só interfere no saldo quando está efetivamente paga.
@@ -2573,8 +3136,45 @@ function finIsPastMonth(y, m){
   return (y < now.getFullYear()) || (y === now.getFullYear() && m < now.getMonth());
 }
 
+// ─── RESUMO DO MÊS (fonte única dos indicadores) ──────────────
+// Recebido = mensalidades pagas (valor congelado) + receitas avulsas pagas
+// Pago     = despesas pagas. A receber / A pagar = em aberto dentro do prazo.
+// Vencido  = em aberto com vencimento já passado.
+function finMonthSummary(y, m){
+  const md = finData.months[finKey(y, m)] || { feeValue:15, fees:{}, paid:[], recvs:[], expenses:[] };
+  const s = { feesIn:0, recvIn:0, out:0,
+              recvPend:0, recvPendN:0, recvOver:0, recvOverN:0,
+              payPend:0, payPendN:0, payOver:0, payOverN:0,
+              feePend:[], feeOver:[], feePendVal:0, feeOverVal:0 };
+  s.feesIn = finFeesIn(md);
+  const dfv = md.feeValue || 15;
+  const feeDue = finFeeDueISO(y, m);
+  const feeSt  = finStatus(false, feeDue);
+  finMensalistas(y, m).forEach(pp => {
+    if(finIsFeePaid(md, pp)) return;
+    const v = personFee(pp, dfv);
+    if(feeSt === 'overdue'){ s.feeOver.push(pp); s.feeOverVal += v; s.recvOver += v; s.recvOverN++; }
+    else                   { s.feePend.push(pp); s.feePendVal += v; s.recvPend += v; s.recvPendN++; }
+  });
+  (md.recvs||[]).forEach(r => {
+    const st = finStatus(r.paid, finEntryDueISO(r, y, m));
+    if(st === 'paid') s.recvIn += r.val;
+    else if(st === 'overdue'){ s.recvOver += r.val; s.recvOverN++; }
+    else { s.recvPend += r.val; s.recvPendN++; }
+  });
+  (md.expenses||[]).forEach(e => {
+    const st = finStatus(finIsExpPaid(e), finEntryDueISO(e, y, m));
+    if(st === 'paid') s.out += e.val;
+    else if(st === 'overdue'){ s.payOver += e.val; s.payOverN++; }
+    else { s.payPend += e.val; s.payPendN++; }
+  });
+  s.inn = s.feesIn + s.recvIn;
+  s.bal = s.inn - s.out;
+  return s;
+}
+
 // Total de pendências urgentes, independente do mês que está sendo navegado na tela:
-// mensalidades do mês REAL ainda não pagas + convidados/avulsos vencidos em qualquer mês encerrado.
+// mensalidades do mês REAL ainda não pagas + receitas e contas vencidas em qualquer mês.
 function finPendingBadgeCount(){
   const now    = new Date();
   const nowY   = now.getFullYear();
@@ -2583,16 +3183,15 @@ function finPendingBadgeCount(){
   let count = 0;
 
   if(curMd){
-    count += players.filter(p =>
-      !p.isGuest && finPlayerActiveIn(p, nowY, nowM) && !curMd.paid.includes(p.name)
-    ).length;
+    count += finMensalistas(nowY, nowM).filter(pp => !finIsFeePaid(curMd, pp)).length;
   }
 
   Object.keys(finData.months).forEach(k => {
-    const [y, m] = k.split('-').map(Number);
-    if(!finIsPastMonth(y, m)) return;
+    const { y, m } = finParseKey(k);
     const md = finData.months[k];
-    if(md && md.recvs) count += md.recvs.filter(r => !r.paid).length;
+    if(!md) return;
+    count += (md.recvs||[]).filter(r => finStatus(r.paid, finEntryDueISO(r, y, m)) === 'overdue').length;
+    count += (md.expenses||[]).filter(e => finStatus(finIsExpPaid(e), finEntryDueISO(e, y, m)) === 'overdue').length;
   });
 
   return count;
@@ -2610,14 +3209,9 @@ function finUpdateTabBadge(){
 function finCalcMonthBalance(k){
   const md  = finData.months[k];
   if(!md) return 0;
-  const dfv    = md.feeValue||15;
-  const feesIn = md.paid.reduce((s, name) => {
-    const p = players.find(x => x.name === name);
-    if(p && p.isGuest) return s;
-    return s + (p && p.customFee ? p.customFee : dfv);
-  }, 0);
+  const feesIn = finFeesIn(md); // valores congelados no pagamento
   const recvIn = (md.recvs||[]).filter(r=>r.paid).reduce((s,r)=>s+r.val,0);
-  const out    = md.expenses.filter(finIsExpPaid).reduce((s,e)=>s+e.val,0);
+  const out    = (md.expenses||[]).filter(finIsExpPaid).reduce((s,e)=>s+e.val,0);
   return (feesIn + recvIn) - out;
 }
 
@@ -2629,26 +3223,22 @@ function finCalcTotalBalance(){
 }
 
 function renderFinKPIs(){
-  const md   = finMonthData();
-  const fv   = md.feeValue||15;
-  const feesIn  = md.paid.reduce((s, name) => {
-    const p = players.find(x => x.name === name);
-    if(p && p.isGuest) return s; // guests counted in recv section
-    return s + (p && p.customFee ? p.customFee : fv);
-  }, 0);
-  const recvIn  = (md.recvs||[]).filter(r=>r.paid).reduce((s,r)=>s+r.val,0);
-  const recvPend= (md.recvs||[]).filter(r=>!r.paid).reduce((s,r)=>s+r.val,0);
-  const inn  = feesIn + recvIn;
-  const out     = md.expenses.filter(finIsExpPaid).reduce((s,e)=>s+e.val,0);
-  const outPend = md.expenses.filter(e=>!finIsExpPaid(e)).reduce((s,e)=>s+e.val,0);
-  const bal  = inn - out;
+  const s = finMonthSummary(finYear, finMonth);
 
-  document.getElementById('fin-kpi-in').textContent  = finFmt(inn) + (recvPend>0?` (+${finFmt(recvPend)} a receber)`:'');
-  document.getElementById('fin-kpi-out').textContent = finFmt(out) + (outPend>0?` (+${finFmt(outPend)} provisão)`:'');
-  document.getElementById('fin-kpi-bal').textContent = finFmt(bal);
+  document.getElementById('fin-kpi-in').textContent  = finFmt(s.inn);
+  document.getElementById('fin-kpi-out').textContent = finFmt(s.out);
+  document.getElementById('fin-kpi-bal').textContent = finFmt(s.bal);
+  document.getElementById('fin-kpi-recv').textContent = finFmt(s.recvPend);
+  document.getElementById('fin-kpi-recv-sub').textContent = s.recvPendN ? `${s.recvPendN} em aberto` : 'nada em aberto';
+  document.getElementById('fin-kpi-pay').textContent = finFmt(s.payPend);
+  document.getElementById('fin-kpi-pay-sub').textContent = s.payPendN ? `${s.payPendN} provisão(ões)` : 'nada em aberto';
+  document.getElementById('fin-kpi-over').textContent = finFmt(s.recvOver + s.payOver);
+  document.getElementById('fin-kpi-over-sub').textContent =
+    (s.recvOverN || s.payOverN) ? `receber ${finFmt(s.recvOver)} · pagar ${finFmt(s.payOver)}` : 'nada vencido';
+  document.getElementById('fin-kpi-over-card').classList.toggle('has-over', (s.recvOverN + s.payOverN) > 0);
 
   const balCard = document.getElementById('fin-kpi-bal-card');
-  balCard.classList.toggle('negative', bal < 0);
+  balCard.classList.toggle('negative', s.bal < 0);
 
   // ── Atualiza banner de caixa total ──
   const totalBal = finCalcTotalBalance();
@@ -2661,35 +3251,30 @@ function playerFee(p, defaultFee){
   return (p.customFee != null && p.customFee > 0) ? p.customFee : (defaultFee||15);
 }
 
-// Resumo consolidado de pendências do mês em exibição (mensalidades + convidados/avulsos).
+// Resumo consolidado de pendências do mês em exibição (mensalidades + avulsos + contas).
 // Só aparece quando há algo em aberto — some sozinho quando tudo estiver pago.
 function renderFinPendingSummary(){
   const el = document.getElementById('fin-pending-summary');
   if(!el) return;
 
-  const md  = finMonthData();
-  const dfv = md.feeValue || 15;
+  finMonthData(); // garante o mês criado (comportamento original)
+  const s = finMonthSummary(finYear, finMonth);
+  const feeN  = s.feePend.length + s.feeOver.length;
+  const recvN = s.recvPendN + s.recvOverN - feeN;
+  const payN  = s.payPendN + s.payOverN;
 
-  const feePend = players.filter(p =>
-    !p.isGuest && finPlayerActiveIn(p, finYear, finMonth) && !md.paid.includes(p.name)
-  );
-  const feePendVal = feePend.reduce((s,p) => s + playerFee(p, dfv), 0);
-
-  const recvPend    = (md.recvs||[]).filter(r => !r.paid);
-  const recvPendVal = recvPend.reduce((s,r) => s + r.val, 0);
-  const overdue     = finIsPastMonth(finYear, finMonth);
-
-  const totalCount = feePend.length + recvPend.length;
-  if(!totalCount){
+  if(!feeN && !recvN && !payN){
     el.style.display = 'none';
     return;
   }
 
   const parts = [];
-  if(feePend.length)  parts.push(`${feePend.length} jogador${feePend.length>1?'es':''}`);
-  if(recvPend.length) parts.push(`${recvPend.length} convidado${recvPend.length>1?'s':''}${overdue?` vencido${recvPend.length>1?'s':''}`:''}`);
+  if(feeN)  parts.push(`${feeN} mensalidade${feeN>1?'s':''}${s.feeOver.length?' (vencida'+(s.feeOver.length>1?'s':'')+')':''}`);
+  if(recvN) parts.push(`${recvN} receita${recvN>1?'s':''} avulsa${recvN>1?'s':''}`);
+  let txt = `${finFmt(s.recvPend + s.recvOver)} a receber${parts.length ? ' — ' + parts.join(' + ') : ''}`;
+  if(payN) txt += ` · ${finFmt(s.payPend + s.payOver)} a pagar (${payN} conta${payN>1?'s':''})`;
 
-  el.innerHTML = `<span class="ico">⚠️</span><span class="txt">${finFmt(feePendVal + recvPendVal)} a receber — ${parts.join(' + ')}</span>`;
+  el.innerHTML = `<span class="ico">⚠️</span><span class="txt">${txt}</span>`;
   el.style.display = 'flex';
 }
 
@@ -2697,43 +3282,56 @@ function renderFinFeeGrid(){
   const md   = finMonthData();
   const dfv  = md.feeValue||15;
   const grid = document.getElementById('fin-fee-grid');
+  const feeOverdue = finStatus(false, finFeeDueISO(finYear, finMonth)) === 'overdue';
 
-  // Exclude guests from mensalidades — they go to recv section
-  // Exclude players who joined AFTER this month — não devem aparecer como devedores no passado
-  const sorted = [...players]
-    .filter(p => !p.isGuest && finPlayerActiveIn(p, finYear, finMonth))
-    .sort((a,b)=>a.name.localeCompare(b.name));
+  // Mensalistas ativos no mês (convidados e quem entrou depois ficam de fora)
+  // + quem tem pagamento registrado no mês mesmo sem ser mensalista hoje
+  // (histórico nunca some da tela).
+  const list = finMensalistas(finYear, finMonth);
+  Object.keys(md.fees).forEach(id => {
+    const pp = personById(Number(id));
+    if(pp && !list.includes(pp)) list.push(pp);
+  });
+  list.sort((a,b) => personName(a).localeCompare(personName(b)));
+  const mensal = list.filter(pp => personIsMensalista(pp) && personActiveIn(pp, finYear, finMonth));
 
   // ── Indicador de adimplência ──
   const statsEl = document.getElementById('fin-fee-stats');
   if(statsEl){
-    if(sorted.length){
-      const pagos = sorted.filter(p => md.paid.includes(p.name)).length;
-      const pct   = Math.round((pagos/sorted.length)*100);
+    if(mensal.length){
+      const pagos = mensal.filter(pp => finIsFeePaid(md, pp)).length;
+      const pct   = Math.round((pagos/mensal.length)*100);
       const cls   = pct>=80 ? 'ok' : pct>=50 ? 'warn' : 'bad';
-      statsEl.innerHTML = `<span class="fin-adimpl fin-adimpl-${cls}">${pct}% de adimplência</span> · ${pagos}/${sorted.length} pagantes este mês`;
+      statsEl.innerHTML = `<span class="fin-adimpl fin-adimpl-${cls}">${pct}% de adimplência</span> · ${pagos}/${mensal.length} pagantes · vence ${finFmtDate(finFeeDueISO(finYear, finMonth))}`;
     } else {
       statsEl.innerHTML = '';
     }
   }
 
-  if(!sorted.length){
-    grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="ico">💳</div>Sem jogadores cadastrados.</div>';
+  if(!list.length){
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="ico">💳</div>Sem mensalistas cadastrados.</div>';
     return;
   }
 
-  grid.innerHTML = sorted.map(p => {
-    const isPaid = md.paid.includes(p.name);
-    const fv     = playerFee(p, dfv);
-    const cls    = isPaid ? 'paid' : 'pending-fee';
+  grid.innerHTML = list.map(pp => {
+    const fee    = md.fees[pp.id];
+    const isPaid = !!fee;
+    const fv     = isPaid ? fee.val : personFee(pp, dfv);
+    const cls    = isPaid ? 'paid' : ('pending-fee' + (feeOverdue ? ' overdue-fee' : ''));
     const icon   = isPaid ? '✓' : '!';
-    const hint   = p.customFee != null ? ' ★' : '';
-    return `<div class="fin-fee-item ${cls}" onclick="finTogglePaid('${p.name}')">
+    const hint   = pp.customFee != null && pp.customFee > 0 ? ' ★' : '';
+    return `<div class="fin-fee-item ${cls}" onclick="finTogglePaid(${pp.id})">
       <div class="fin-fee-check">${icon}</div>
-      <span class="fin-fee-name">${p.name}${hint}</span>
-      <span class="fin-fee-amt">${isPaid ? finFmt(fv) : 'Pendente'}</span>
+      <span class="fin-fee-name">${finEsc(personName(pp))}${hint}</span>
+      <span class="fin-fee-amt">${isPaid ? finFmt(fv) : (feeOverdue ? 'Vencida' : 'Pendente')}</span>
     </div>`;
   }).join('');
+}
+
+function finEntryBadges(e, y, m){
+  const due = finEntryDueISO(e, y, m);
+  return `${e.recId ? '<span class="fin-rec-tag" title="Gerado por recorrência">🔁</span>' : ''}` +
+         `<span class="fin-due">${e.due ? 'vence ' : 'até '}${finFmtDate(due)}</span>`;
 }
 
 function renderFinExpenses(){
@@ -2743,16 +3341,20 @@ function renderFinExpenses(){
     el.innerHTML = '<div class="empty"><div class="ico">📋</div>Nenhuma conta registrada.</div>';
     return;
   }
-  el.innerHTML = md.expenses.map(e => {
-    const isPaid = finIsExpPaid(e);
-    const cls    = isPaid ? 'exp-paid' : 'exp-pending';
-    const icon   = isPaid ? '✓' : '⏳';
-    const lbl    = isPaid ? `- ${finFmt(e.val)}` : `- ${finFmt(e.val)} provisão`;
+  // Ordena: vencida → provisão → paga; depois por vencimento
+  const rank = { overdue:0, pending:1, paid:2 };
+  const rows = md.expenses.map(e => ({ e, st: finStatus(finIsExpPaid(e), finEntryDueISO(e, finYear, finMonth)) }))
+    .sort((a,b) => rank[a.st] - rank[b.st] || finEntryDueISO(a.e, finYear, finMonth).localeCompare(finEntryDueISO(b.e, finYear, finMonth)));
+  el.innerHTML = rows.map(({e, st}) => {
+    const cls    = st === 'paid' ? 'exp-paid' : (st === 'overdue' ? 'exp-overdue' : 'exp-pending');
+    const icon   = st === 'paid' ? '✓' : (st === 'overdue' ? '⚠️' : '⏳');
+    const lbl    = st === 'paid' ? `- ${finFmt(e.val)}` : `- ${finFmt(e.val)} ${st === 'overdue' ? 'vencida' : 'provisão'}`;
     return `
     <div class="fin-exp-item ${cls}" onclick="finToggleExpense(${e.id})">
       <div class="fin-exp-check">${icon}</div>
-      <span class="fin-exp-cat">${e.cat||'Outros'}</span>
-      <span class="fin-exp-desc">${e.desc}</span>
+      <span class="fin-exp-cat">${finEsc(e.cat||'Outros')}</span>
+      <span class="fin-exp-desc">${finEsc(e.desc)}</span>
+      ${finEntryBadges(e, finYear, finMonth)}
       <span class="fin-exp-val">${lbl}</span>
       <button class="fin-edit-btn" onclick="event.stopPropagation();finOpenModal('expense',${e.id})" title="Editar">✏️</button>
       <button class="fin-exp-del"  onclick="event.stopPropagation();finDelExpense(${e.id})" title="Excluir">🗑</button>
@@ -2764,26 +3366,23 @@ function renderFinRecv(){
   const md = finMonthData();
   const el = document.getElementById('fin-recv-list');
   if(!md.recvs.length){
-    el.innerHTML = '<div class="empty"><div class="ico">🤝</div>Nenhum convidado registrado este mês.</div>';
+    el.innerHTML = '<div class="empty"><div class="ico">🤝</div>Nenhuma receita avulsa registrada este mês.</div>';
     return;
   }
-  const overdue = finIsPastMonth(finYear, finMonth); // true só se o mês exibido já virou
 
   // Ordena por urgência (vencido → pendente → pago); dentro do mesmo status, por nome
-  const statusRank = r => r.paid ? 2 : (overdue ? 0 : 1);
-  const sorted = [...md.recvs].sort((a,b) => {
-    const ra = statusRank(a), rb = statusRank(b);
-    return ra !== rb ? ra - rb : a.name.localeCompare(b.name);
-  });
+  const rank = { overdue:0, pending:1, paid:2 };
+  const rows = md.recvs.map(r => ({ r, st: finStatus(r.paid, finEntryDueISO(r, finYear, finMonth)) }))
+    .sort((a,b) => rank[a.st] - rank[b.st] || a.r.name.localeCompare(b.r.name));
 
-  el.innerHTML = sorted.map(r => {
-    const isOverdue = !r.paid && overdue;
-    const cls  = r.paid ? 'recv-paid' : (isOverdue ? 'recv-overdue' : 'recv-pending');
-    const icon = r.paid ? '✓' : (isOverdue ? '⚠️' : '⏳');
-    const lbl  = r.paid ? finFmt(r.val) : (isOverdue ? `${finFmt(r.val)} vencido` : `${finFmt(r.val)} pendente`);
+  el.innerHTML = rows.map(({r, st}) => {
+    const cls  = st === 'paid' ? 'recv-paid' : (st === 'overdue' ? 'recv-overdue' : 'recv-pending');
+    const icon = st === 'paid' ? '✓' : (st === 'overdue' ? '⚠️' : '⏳');
+    const lbl  = st === 'paid' ? finFmt(r.val) : (st === 'overdue' ? `${finFmt(r.val)} vencido` : `${finFmt(r.val)} pendente`);
     return `<div class="fin-recv-item ${cls}" onclick="finToggleRecv(${r.id})">
       <div class="fin-recv-check">${icon}</div>
-      <span class="fin-recv-name">${r.name}</span>
+      <span class="fin-recv-name">${finEsc(r.name)}</span>
+      ${finEntryBadges(r, finYear, finMonth)}
       <span class="fin-recv-amt">${lbl}</span>
       <button class="fin-edit-btn" onclick="event.stopPropagation();finOpenModal('recv',${r.id})" title="Editar">✏️</button>
       <button class="fin-recv-del" onclick="event.stopPropagation();finDelRecv(${r.id})" title="Excluir">🗑</button>
@@ -2813,16 +3412,18 @@ function finOpenModal(type, id){
     document.getElementById('fin-modal-cat-wrap').style.display  = '';
     descInp.value = e.desc;
     valInp.value  = e.val;
+    document.getElementById('fin-modal-due').value = e.due || '';
     finPopulateCatSelect('fin-modal-cat', e.cat||'Outros');
   } else {
     const r = md.recvs.find(x => x.id === id);
     if(!r) return;
-    titleEl.textContent = '✏️ Editar Convidado';
+    titleEl.textContent = '✏️ Editar Receita';
     document.getElementById('fin-modal-desc-wrap').style.display = '';
     document.getElementById('fin-modal-cat-wrap').style.display  = 'none';
     descInp.placeholder = 'Nome (ex: Convidado)';
     descInp.value = r.name;
     valInp.value  = r.val;
+    document.getElementById('fin-modal-due').value = r.due || '';
   }
 
   overlay.style.display = 'flex';
@@ -2840,16 +3441,17 @@ function finModalSave(){
   const md   = finMonthData();
   const desc = document.getElementById('fin-modal-desc').value.trim();
   const val  = parseFloat(document.getElementById('fin-modal-val').value)||0;
+  const due  = document.getElementById('fin-modal-due').value || null;
 
   if(!desc){ toast('⚠️ Preencha a descrição.'); return; }
   if(val <= 0){ toast('⚠️ Valor deve ser maior que zero.'); return; }
 
   if(_modalType === 'expense'){
     const e = md.expenses.find(x => x.id === _modalId);
-    if(e){ e.desc = desc; e.val = val; e.cat = document.getElementById('fin-modal-cat').value || 'Outros'; }
+    if(e){ e.desc = desc; e.val = val; e.due = due; e.cat = document.getElementById('fin-modal-cat').value || 'Outros'; }
   } else {
     const r = md.recvs.find(x => x.id === _modalId);
-    if(r){ r.name = desc; r.val = val; }
+    if(r){ r.name = desc; r.val = val; r.due = due; }
   }
 
   finSave(finData);
@@ -2893,7 +3495,8 @@ function finModalDelete(){
 let _confirmOkFn     = null;
 let _confirmCancelFn = null;
 
-function finConfirm(title, msg, onOk, onCancel){
+function finConfirm(title, msg, onOk, onCancel, okLabel){
+  document.getElementById('fin-confirm-ok-btn').textContent = okLabel || '🗑 Excluir';
   document.getElementById('fin-confirm-title').textContent = title;
   document.getElementById('fin-confirm-msg').textContent   = msg;
   _confirmOkFn     = onOk     || null;
@@ -2921,6 +3524,7 @@ document.addEventListener('keydown', e => {
   document.getElementById('vagas-modal-overlay').style.display = 'none';
   document.getElementById('cobranca-modal-overlay').style.display = 'none';
   document.getElementById('chur-multi-modal-overlay').style.display = 'none';
+  document.getElementById('pp-modal-overlay').style.display = 'none';
 });
 
 // Expande/recolhe as seções colapsáveis da aba Financeiro (Resumo Anual, Backup)
@@ -2933,16 +3537,11 @@ function finToggleCollapse(headerEl){
 function renderFinAnnual(){
   const months = MONTHS.map((name, m) => {
     const k   = finKey(finYear, m);
-    const md  = finData.months[k] || { feeValue:15, expenses:[], paid:[], recvs:[] };
-    const fv  = md.feeValue||15;
-    const feesIn = md.paid.reduce((s, name) => {
-      const p = players.find(x => x.name === name);
-      if(p && p.isGuest) return s;
-      return s + (p && p.customFee ? p.customFee : fv);
-    }, 0);
+    const md  = finData.months[k] || { feeValue:15, expenses:[], paid:[], recvs:[], fees:{} };
+    const feesIn = finFeesIn(md); // valores congelados no pagamento
     const recvIn = (md.recvs||[]).filter(r=>r.paid).reduce((s,r)=>s+r.val,0);
     const inn = feesIn + recvIn;
-    const out = md.expenses.filter(finIsExpPaid).reduce((s,e)=>s+e.val,0);
+    const out = (md.expenses||[]).filter(finIsExpPaid).reduce((s,e)=>s+e.val,0);
     return { name, m, inn, out, bal: inn - out };
   });
 
@@ -2954,6 +3553,8 @@ function renderFinAnnual(){
   const curM = (finYear === now.getFullYear()) ? now.getMonth() : -1;
 
   renderFinChart(months, curM);
+  const annTitle = document.getElementById('fin-annual-title');
+  if(annTitle) annTitle.textContent = `📊 Resumo Anual ${finYear}`;
 
   const rows = months.map(r => {
     const isCur = r.m === curM;
@@ -3031,23 +3632,22 @@ function finSendWA(){
   const now    = new Date();
   const today  = now.toLocaleDateString('pt-BR');
 
-  // Listas de pagantes e pendentes (excluindo convidados)
-  const paidList = md.paid.filter(name => {
-    const p = players.find(x => x.name === name);
-    return !(p && p.isGuest);
-  });
-  const pendList = players
-    .filter(p => !p.isGuest && finPlayerActiveIn(p, finYear, finMonth) && !md.paid.includes(p.name))
-    .map(p => ({ name: p.name, months: finMonthsOwed(p.name) }));
+  // Listas de pagantes e pendentes (por pessoa — sem duplicar ninguém)
+  const paidList = Object.keys(md.fees)
+    .map(id => personById(Number(id)))
+    .filter(pp => pp && Number(md.fees[pp.id].val) > 0)
+    .map(personName)
+    .sort((a,b)=>a.localeCompare(b));
+  const pendList = finMensalistas(finYear, finMonth)
+    .filter(pp => !finIsFeePaid(md, pp))
+    .map(pp => ({ name: personName(pp), months: finMonthsOwed(pp.id) }));
 
   // Cálculos
-  const feesIn   = paidList.reduce((s, name) => {
-    const p = players.find(x => x.name === name);
-    return s + (p && p.customFee ? p.customFee : dfv);
-  }, 0);
+  const feesIn   = finFeesIn(md); // valores congelados no pagamento
   const recvPaid = (md.recvs||[]).filter(r => r.paid);
   const recvPend = (md.recvs||[]).filter(r => !r.paid);
   const recvIn   = recvPaid.reduce((s,r) => s + r.val, 0);
+  const recvLate = r => finStatus(r.paid, finEntryDueISO(r, finYear, finMonth)) === 'overdue';
   const expPaid  = md.expenses.filter(finIsExpPaid);
   const expPend  = md.expenses.filter(e => !finIsExpPaid(e));
   const out      = expPaid.reduce((s,e) => s + e.val, 0);
@@ -3089,7 +3689,7 @@ function finSendWA(){
     msg += `🤝 *CONVIDADOS / AVULSOS*\n`;
     msg += `${sep2}\n`;
     recvPaid.forEach(r => msg += `  ✅ ${r.name}: *${finFmt(r.val)}*\n`);
-    recvPend.forEach(r => msg += `  ⏳ ${r.name}: ${finFmt(r.val)} _(a receber)_\n`);
+    recvPend.forEach(r => msg += `  ${recvLate(r) ? '⚠️' : '⏳'} ${r.name}: ${finFmt(r.val)} _(${recvLate(r) ? 'vencido' : 'a receber'})_\n`);
     msg += `💰 Subtotal recebido: *${finFmt(recvIn)}*\n`;
     if(recvPend.length){
       const pendVal = recvPend.reduce((s,r)=>s+r.val,0);
@@ -3145,15 +3745,16 @@ function finSendWA(){
 
 // Conta quantos meses consecutivos (incluindo o atual) o jogador está devendo.
 // Para a contagem ao encontrar um mês pago ou um mês sem registro (fora do período controlado).
-function finMonthsOwed(name){
-  const player = players.find(x => x.name === name);
+function finMonthsOwed(personId){
+  const pp = personById(personId);
+  if(!pp) return 0;
   let y = finYear, m = finMonth, count = 0;
-  while(true){
-    if(player && !finPlayerActiveIn(player, y, m)) break; // não cobra meses anteriores ao ingresso
+  while(count < 240){
+    if(!personActiveIn(pp, y, m)) break; // não cobra meses anteriores ao ingresso
     const k  = finKey(y, m);
     const md = finData.months[k];
     if(!md) break;
-    if(md.paid.includes(name)) break;
+    if(finIsFeePaid(md, pp)) break;
     count++;
     m--;
     if(m < 0){ m = 11; y--; }
@@ -3179,21 +3780,17 @@ function finSendCobranca(){
   const dfv    = md.feeValue || 15;
   const mLabel = MONTHS[finMonth] + ' ' + finYear;
 
-  const paidList = players
-    .filter(p => !p.isGuest && md.paid.includes(p.name))
-    .map(p => p.name)
-    .sort((a,b)=>a.localeCompare(b));
-  const pendList = players
-    .filter(p => !p.isGuest && finPlayerActiveIn(p, finYear, finMonth) && !md.paid.includes(p.name))
-    .map(p => p.name)
-    .sort((a,b)=>a.localeCompare(b))
-    .map(name => ({ name, months: finMonthsOwed(name) }));
+  // Uma linha por pessoa: impossível cobrar a mesma mensalidade duas vezes
+  const mensal   = finMensalistas(finYear, finMonth);
+  const paidList = mensal.filter(pp => finIsFeePaid(md, pp)).map(personName);
+  const pendList = mensal.filter(pp => !finIsFeePaid(md, pp))
+    .map(pp => ({ name: personName(pp), months: finMonthsOwed(pp.id) }));
 
-  // Convidados/avulsos ainda não pagos neste mês — "vencido" se o mês já virou
-  const recvOverdue = finIsPastMonth(finYear, finMonth);
+  // Receitas avulsas ainda não pagas neste mês — "vencido" pelo vencimento de cada uma
   const recvPend = (md.recvs||[])
     .filter(r => !r.paid)
     .sort((a,b)=>a.name.localeCompare(b.name));
+  const recvOverdue = recvPend.some(r => finStatus(false, finEntryDueISO(r, finYear, finMonth)) === 'overdue');
 
   if(!pendList.length && !recvPend.length){
     toast('✅ Ninguém está pendente este mês!');
@@ -3273,6 +3870,390 @@ function finCobrancaModalSend(){
   window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank');
   document.getElementById('cobranca-modal-overlay').style.display = 'none';
 }
+
+// ═══════════════════════════════════════════════════════════════
+// RECORRÊNCIAS — formulário e lista
+// ═══════════════════════════════════════════════════════════════
+const REV_CATEGORIES = ['Patrocínio','Convidado','Evento','Outros'];
+
+function recFormInit(){
+  const mSel = document.getElementById('rec-month');
+  if(mSel && !mSel.options.length) mSel.innerHTML = MONTHS.map((n,i) => `<option value="${i}">${n}</option>`).join('');
+  recFormReset();
+}
+
+function recFormKindChange(){
+  const kind = document.getElementById('rec-kind').value;
+  const cats = kind === 'in' ? REV_CATEGORIES : EXP_CATEGORIES;
+  const sel  = document.getElementById('rec-cat');
+  const cur  = sel.value;
+  sel.innerHTML = cats.map(c => `<option value="${c}" ${c===cur?'selected':''}>${c}</option>`).join('');
+  document.getElementById('rec-person').style.display = kind === 'in' ? '' : 'none';
+}
+
+function recFormFreqChange(){
+  const freq = document.getElementById('rec-freq').value;
+  document.getElementById('rec-day').style.display     = freq === 'weekly' ? 'none' : '';
+  document.getElementById('rec-weekday').style.display = freq === 'weekly' ? '' : 'none';
+  document.getElementById('rec-month').style.display   = freq === 'yearly' ? '' : 'none';
+}
+
+function recFormReset(){
+  document.getElementById('rec-id').value = '';
+  document.getElementById('rec-kind').value = 'out';
+  document.getElementById('rec-desc').value = '';
+  document.getElementById('rec-val').value = '';
+  document.getElementById('rec-person').value = '';
+  document.getElementById('rec-freq').value = 'monthly';
+  document.getElementById('rec-day').value = '';
+  document.getElementById('rec-weekday').value = String(GAME_WEEKDAY);
+  document.getElementById('rec-month').value = String(new Date().getMonth());
+  document.getElementById('rec-start').value = finTodayISO();
+  document.getElementById('rec-end').value = '';
+  document.getElementById('rec-form-title').textContent = '🔁 Nova Recorrência';
+  document.getElementById('rec-save-btn').textContent = '➕ Criar Recorrência';
+  document.getElementById('rec-cancel-btn').style.display = 'none';
+  document.getElementById('rec-kind').disabled = false;
+  recFormKindChange();
+  recFormFreqChange();
+}
+
+function recReadForm(){
+  const kind  = document.getElementById('rec-kind').value;
+  const desc  = document.getElementById('rec-desc').value.trim();
+  const val   = parseFloat(document.getElementById('rec-val').value) || 0;
+  const cat   = document.getElementById('rec-cat').value || 'Outros';
+  const freq  = document.getElementById('rec-freq').value;
+  const start = document.getElementById('rec-start').value;
+  const end   = document.getElementById('rec-end').value || '';
+  const personName = kind === 'in' ? document.getElementById('rec-person').value.trim() : '';
+  let day, month = null;
+  if(freq === 'weekly') day = parseInt(document.getElementById('rec-weekday').value);
+  else {
+    day = parseInt(document.getElementById('rec-day').value);
+    if(!(day >= 1 && day <= 31)){ toast('⚠️ Informe o dia do vencimento (1 a 31).'); return null; }
+    if(freq === 'yearly') month = parseInt(document.getElementById('rec-month').value);
+  }
+  if(!desc || val <= 0){ toast('⚠️ Preencha descrição e valor.'); return null; }
+  if(!start){ toast('⚠️ Informe a data de início.'); return null; }
+  if(end && end < start){ toast('⚠️ O fim não pode ser antes do início.'); return null; }
+  return { kind, desc, val, cat, freq, day, month, start, end, personName };
+}
+
+function recSave(){
+  const f = recReadForm();
+  if(!f) return;
+  const editingId = Number(document.getElementById('rec-id').value) || null;
+  let pp = f.kind === 'in' && f.personName ? personByName(f.personName) : null;
+
+  const go = () => {
+    if(f.kind === 'in' && f.personName && !pp) pp = ppCreate(f.personName, false);
+    const today = finTodayISO();
+    const fields = { kind:f.kind, desc:f.desc, val:f.val, cat:f.cat, freq:f.freq, day:f.day, month:f.month,
+                     start:f.start, end:f.end, personId: pp ? pp.id : null };
+    let removed = 0;
+    if(editingId){
+      const rec = finData.recurrences.find(r => r.id === editingId);
+      if(!rec) return;
+      // Pagos nunca mudam; os em aberto a partir de hoje são refeitos com os novos dados
+      removed = recRemoveUnpaid(finData, rec.id, today);
+      Object.assign(rec, fields);
+      const now = new Date();
+      rec.genFrom = finDayISO(now.getFullYear(), now.getMonth(), 1);
+      if(rec.end && rec.end < today) rec.status = 'ended';
+      else if(rec.status === 'ended') rec.status = 'active';
+    } else {
+      finData.recurrences.push({ id: finData.recNextId++, ...fields, status:'active', pauses:[], createdAt: today });
+    }
+    const n = finGenerateRecurrences(finData);
+    finSave(finData);
+    recFormReset();
+    renderFin();
+    toast(editingId ? `✅ Recorrência atualizada${n||removed ? ` (${n} lançamento${n===1?'':'s'} ajustado${n===1?'':'s'})` : ''}`
+                    : `✅ Recorrência criada — ${n} lançamento${n===1?'':'s'} gerado${n===1?'':'s'} até ${MONTHS[new Date().getMonth()]}.`);
+  };
+
+  // Proteções contra cobrança duplicada
+  if(f.kind === 'in' && pp && personIsMensalista(pp)){
+    finConfirm('⚠️ Possível cobrança duplicada',
+      `${personName(pp)} é mensalista e já é cobrado(a) em Mensalidades. Criar esta receita recorrente mesmo assim? (Use só para valores extras.)`,
+      go, null, '🔁 Criar mesmo assim');
+    return;
+  }
+  const twin = finData.recurrences.find(r => r.id !== editingId && r.status !== 'ended' && r.kind === f.kind
+    && r.freq === f.freq && Number(r.val) === f.val && r.desc.toLowerCase() === f.desc.toLowerCase());
+  if(twin){
+    finConfirm('⚠️ Recorrência parecida já existe',
+      `Já existe "${twin.desc}" (${REC_FREQ_LABEL[twin.freq]}, ${finFmt(twin.val)}). Criar outra igual pode duplicar lançamentos.`,
+      go, null, '🔁 Criar mesmo assim');
+    return;
+  }
+  go();
+}
+
+function recEdit(id){
+  const rec = finData.recurrences.find(r => r.id === id);
+  if(!rec) return;
+  finSubTab('recur');
+  document.getElementById('rec-id').value = rec.id;
+  document.getElementById('rec-kind').value = rec.kind;
+  document.getElementById('rec-kind').disabled = true; // trocar receita↔despesa = nova recorrência
+  recFormKindChange();
+  document.getElementById('rec-desc').value = rec.desc;
+  document.getElementById('rec-val').value = rec.val;
+  document.getElementById('rec-cat').value = rec.cat || 'Outros';
+  const pp = rec.personId ? personById(rec.personId) : null;
+  document.getElementById('rec-person').value = pp ? personName(pp) : '';
+  document.getElementById('rec-freq').value = rec.freq;
+  recFormFreqChange();
+  if(rec.freq === 'weekly') document.getElementById('rec-weekday').value = String(rec.day);
+  else document.getElementById('rec-day').value = rec.day;
+  if(rec.freq === 'yearly') document.getElementById('rec-month').value = String(rec.month ?? 0);
+  document.getElementById('rec-start').value = rec.start;
+  document.getElementById('rec-end').value = rec.end || '';
+  document.getElementById('rec-form-title').textContent = '✏️ Editar Recorrência';
+  document.getElementById('rec-save-btn').textContent = '💾 Salvar Alterações';
+  document.getElementById('rec-cancel-btn').style.display = '';
+  document.getElementById('rec-desc').focus();
+}
+
+function recPause(id){
+  const rec = finData.recurrences.find(r => r.id === id);
+  if(!rec || rec.status !== 'active') return;
+  const today = finTodayISO();
+  rec.pauses = rec.pauses || [];
+  rec.pauses.push({ from: today, to: null });
+  rec.status = 'paused';
+  const removed = recRemoveUnpaid(finData, rec.id, today);
+  finSave(finData);
+  renderFin();
+  toast(`⏸️ Recorrência pausada${removed ? ` — ${removed} lançamento(s) em aberto removido(s)` : ''}.`);
+}
+
+function recResume(id){
+  const rec = finData.recurrences.find(r => r.id === id);
+  if(!rec || rec.status !== 'paused') return;
+  const open = (rec.pauses||[]).find(p => !p.to);
+  if(open) open.to = finTodayISO();
+  rec.status = 'active';
+  const n = finGenerateRecurrences(finData);
+  finSave(finData);
+  renderFin();
+  toast(`▶️ Recorrência retomada${n ? ` — ${n} lançamento(s) gerado(s)` : ''}.`);
+}
+
+function recEnd(id){
+  const rec = finData.recurrences.find(r => r.id === id);
+  if(!rec) return;
+  finConfirm('⏹️ Encerrar recorrência?',
+    `"${rec.desc}" deixa de gerar lançamentos a partir de amanhã. Os já pagos ficam no histórico; os futuros em aberto são removidos.`,
+    () => {
+      const today = finTodayISO();
+      const t = new Date(); t.setDate(t.getDate() + 1);
+      if(!rec.end || rec.end > today) rec.end = today;
+      const open = (rec.pauses||[]).find(p => !p.to);
+      if(open) open.to = today;
+      rec.status = 'ended';
+      const removed = recRemoveUnpaid(finData, rec.id, finISO(t));
+      finSave(finData);
+      renderFin();
+      toast(`⏹️ Recorrência encerrada${removed ? ` — ${removed} lançamento(s) futuro(s) removido(s)` : ''}.`);
+    }, null, '⏹️ Encerrar');
+}
+
+function recDelete(id){
+  const rec = finData.recurrences.find(r => r.id === id);
+  if(!rec) return;
+  finConfirm('🗑️ Excluir recorrência?',
+    `Remove "${rec.desc}" e os lançamentos dela que ainda estão em aberto. Os já pagos continuam no histórico e no saldo.`,
+    () => {
+      recRemoveUnpaid(finData, rec.id, '0000-00-00');
+      finData.recurrences = finData.recurrences.filter(r => r.id !== id);
+      finSave(finData);
+      if(Number(document.getElementById('rec-id').value) === id) recFormReset();
+      renderFin();
+      toast('🗑 Recorrência excluída.');
+    });
+}
+
+function recDescribe(rec){
+  let when;
+  if(rec.freq === 'weekly') when = `toda ${WEEKDAYS[rec.day] || ''}`.toLowerCase();
+  else if(rec.freq === 'yearly') when = `todo dia ${rec.day} de ${MONTHS[rec.month ?? 0]}`;
+  else when = `todo dia ${rec.day}`;
+  const pp = rec.personId ? personById(rec.personId) : null;
+  return `${REC_FREQ_LABEL[rec.freq]} · ${when} · desde ${finFmtDate(rec.start)}/${rec.start.slice(0,4)}`
+       + (rec.end ? ` · até ${finFmtDate(rec.end)}/${rec.end.slice(0,4)}` : '')
+       + (pp ? ` · ${finEsc(personName(pp))}` : '')
+       + ` · ${finEsc(rec.cat || 'Outros')}`;
+}
+
+function renderRecList(){
+  const el = document.getElementById('rec-list');
+  if(!el) return;
+  const list = [...(finData.recurrences||[])];
+  if(!list.length){
+    el.innerHTML = '<div class="empty"><div class="ico">🔁</div>Nenhuma recorrência cadastrada.</div>';
+    return;
+  }
+  const rank = { active:0, paused:1, ended:2 };
+  list.sort((a,b) => rank[a.status] - rank[b.status] || a.desc.localeCompare(b.desc));
+  el.innerHTML = list.map(rec => {
+    const st = rec.status === 'paused' ? ' rec-paused' : rec.status === 'ended' ? ' rec-ended' : '';
+    const stLbl = rec.status === 'paused' ? '⏸️ Pausada' : rec.status === 'ended' ? '⏹️ Encerrada' : '🟢 Ativa';
+    const actions = rec.status === 'ended'
+      ? `<button onclick="recEdit(${rec.id})" title="Editar / reativar">✏️</button><button onclick="recDelete(${rec.id})" title="Excluir">🗑</button>`
+      : `<button onclick="recEdit(${rec.id})" title="Editar">✏️</button>`
+        + (rec.status === 'paused'
+            ? `<button onclick="recResume(${rec.id})" title="Retomar">▶️</button>`
+            : `<button onclick="recPause(${rec.id})" title="Pausar">⏸️</button>`)
+        + `<button onclick="recEnd(${rec.id})" title="Encerrar">⏹️</button>`;
+    return `<div class="rec-item${st}">
+      <div class="rec-main">
+        <div class="rec-title">${rec.kind === 'in' ? '📥' : '📤'} ${finEsc(rec.desc)} <span class="pp-badge">${stLbl}</span></div>
+        <div class="rec-meta">${recDescribe(rec)}</div>
+      </div>
+      <span class="rec-val ${rec.kind}">${rec.kind === 'in' ? '+' : '-'} ${finFmt(rec.val)}</span>
+      <div class="rec-actions">${actions}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PESSOAS — cadastro simples (nome ou apelido)
+// ═══════════════════════════════════════════════════════════════
+function ppCreate(name, mensalista){
+  const pp = { id: finData.personNextId++, name: name.trim(), playerId: null, mensalista: !!mensalista,
+               active: true, customFee: null, joinedY: null, joinedM: null };
+  finData.people.push(pp);
+  return pp;
+}
+
+function ppAdd(){
+  const inp  = document.getElementById('pp-new-name');
+  const name = inp.value.trim();
+  if(!name){ toast('⚠️ Digite um nome ou apelido.'); return; }
+  if(personByName(name)){ toast('⚠️ Já existe alguém com esse nome.'); return; }
+  const pp = ppCreate(name, false);
+  finSave(finData);
+  inp.value = '';
+  renderFin();
+  toast(`✅ ${pp.name} cadastrado(a)!`);
+  ppOpen(pp.id);
+}
+
+function renderPeople(){
+  const el = document.getElementById('pp-list');
+  if(!el) return;
+  const all = finPeopleOf().filter(pp => !(pp.legacy && pp.active === false && !finPersonHasHistory(pp)));
+  document.getElementById('pp-count').textContent = all.length;
+  if(!all.length){
+    el.innerHTML = '<div class="empty"><div class="ico">👤</div>Nenhuma pessoa cadastrada.</div>';
+    return;
+  }
+  const isActive = pp => pp.active !== false && (pp.playerId == null || !!personPlayer(pp));
+  all.sort((a,b) => (isActive(b) - isActive(a)) || personName(a).localeCompare(personName(b)));
+  const dfv = finMonthData().feeValue || 15;
+  el.innerHTML = all.map(pp => {
+    const pl = personPlayer(pp);
+    const badges = [];
+    if(pl) badges.push(pl.isGuest ? '<span class="pp-badge">🤝 Convidado</span>' : '<span class="pp-badge gold">🗂️ Elenco</span>');
+    else if(pp.playerId != null) badges.push('<span class="pp-badge">Fora do elenco</span>');
+    if(personIsMensalista(pp)) badges.push('<span class="pp-badge gold">💳 Mensalista</span>');
+    if(pp.active === false) badges.push('<span class="pp-badge">Inativo</span>');
+    const meta = [];
+    if(personIsMensalista(pp)) meta.push(`${finFmt(personFee(pp, dfv))}/mês${pp.customFee > 0 ? ' (individual)' : ''}`);
+    if(pp.joinedY != null && pp.joinedM != null) meta.push(`desde ${MONTHS[pp.joinedM].slice(0,3)}/${pp.joinedY}`);
+    const paidN = Object.values(finData.months).filter(md => md && md.fees && md.fees[pp.id]).length;
+    if(paidN) meta.push(`${paidN} mensalidade${paidN>1?'s':''} paga${paidN>1?'s':''}`);
+    return `<div class="pp-item${isActive(pp) ? '' : ' pp-inactive'}">
+      <div class="pp-main">
+        <div class="pp-name">${finEsc(personName(pp))}${badges.join('')}</div>
+        <div class="pp-meta">${meta.join(' · ') || '—'}</div>
+      </div>
+      <div class="rec-actions"><button onclick="ppOpen(${pp.id})" title="Editar">✏️</button></div>
+    </div>`;
+  }).join('');
+}
+
+function finPersonHasHistory(pp){
+  return Object.values(finData.months).some(md => md && (
+    (md.fees && md.fees[pp.id]) || (md.recvs||[]).some(r => r.personId === pp.id)));
+}
+
+let _ppEditId = null;
+function ppOpen(id){
+  const pp = personById(id);
+  if(!pp) return;
+  _ppEditId = id;
+  const pl = personPlayer(pp);
+  const nameInp = document.getElementById('pp-name');
+  nameInp.value = personName(pp);
+  nameInp.disabled = !!pl;
+  document.getElementById('pp-name-hint').style.display = pl ? '' : 'none';
+  const mens = document.getElementById('pp-mensalista');
+  mens.checked = pl ? !pl.isGuest : !!pp.mensalista;
+  mens.disabled = !!pl;
+  document.getElementById('pp-mens-hint').style.display = pl ? '' : 'none';
+  document.getElementById('pp-fee').value = pp.customFee > 0 ? pp.customFee : '';
+  document.getElementById('pp-joined').value = (pp.joinedY != null && pp.joinedM != null)
+    ? `${pp.joinedY}-${String(pp.joinedM+1).padStart(2,'0')}` : '';
+  document.getElementById('pp-active').checked = pp.active !== false;
+  document.getElementById('pp-del-btn').style.display = (!pl && pp.playerId == null) ? '' : 'none';
+  document.getElementById('pp-modal-overlay').style.display = 'flex';
+}
+
+function ppClose(){
+  document.getElementById('pp-modal-overlay').style.display = 'none';
+  _ppEditId = null;
+}
+
+function ppSave(){
+  const pp = personById(_ppEditId);
+  if(!pp) return;
+  const pl = personPlayer(pp);
+  if(!pl){
+    const name = document.getElementById('pp-name').value.trim();
+    if(!name){ toast('⚠️ Digite um nome ou apelido.'); return; }
+    const other = personByName(name);
+    if(other && other.id !== pp.id){ toast('⚠️ Já existe alguém com esse nome.'); return; }
+    if(name !== pp.name){
+      finRenameInPaid(finData, pp.name, name);
+      Object.values(finData.months).forEach(md => (md && md.recvs || []).forEach(r => {
+        if(r.personId === pp.id && r.name === pp.name) r.name = name;
+      }));
+      pp.name = name;
+    }
+    pp.mensalista = document.getElementById('pp-mensalista').checked;
+  }
+  const fee = parseFloat(document.getElementById('pp-fee').value);
+  pp.customFee = (!isNaN(fee) && fee > 0) ? fee : null;
+  const joined = document.getElementById('pp-joined').value;
+  if(joined){ const [jy, jm] = joined.split('-').map(Number); pp.joinedY = jy; pp.joinedM = jm - 1; }
+  else { pp.joinedY = null; pp.joinedM = null; }
+  pp.active = document.getElementById('pp-active').checked;
+  finSave(finData);
+  ppClose();
+  syncFeeStatus();
+  renderFin();
+  toast(`✅ ${personName(pp)} atualizado(a)! Pagamentos já registrados mantêm o valor original.`);
+}
+
+function ppDelete(){
+  const pp = personById(_ppEditId);
+  if(!pp) return;
+  if(finPersonHasHistory(pp) || (finData.recurrences||[]).some(r => r.personId === pp.id)){
+    toast('⚠️ Tem histórico financeiro — desmarque "Ativo" em vez de excluir.');
+    return;
+  }
+  ppClose();
+  finConfirm(`🗑️ Excluir "${pp.name}"?`, 'A pessoa sai do cadastro financeiro.', () => {
+    finData.people = finData.people.filter(x => x.id !== pp.id);
+    finSave(finData);
+    renderFin();
+    toast('🗑 Pessoa removida.');
+  });
+}
 // ─── CHURRASCO ──────────────────────────────────────────────
 // Eventos pontuais de churrasco pós-jogo: valor total gasto,
 // participantes adicionados manualmente e rateio automático.
@@ -3330,6 +4311,7 @@ function churCreate(){
 }
 
 function churDelChurrasco(id){
+  if(currentRole !== 'admin'){ toast('⛔ Só o administrador exclui um churrasco.'); return; }
   finConfirm(
     '🍖 Excluir churrasco?',
     'Esta ação não pode ser desfeita.',
@@ -3496,7 +4478,7 @@ function renderChur(){
           <div class="chur-card-desc">${total} pessoa${total===1?'':'s'} · ${paidCount}/${total} pagaram</div>
         </div>
         <div class="chur-card-total">${finFmt(chur.total)}</div>
-        <button class="chur-card-del" onclick="event.stopPropagation();churDelChurrasco(${chur.id})" title="Excluir churrasco">🗑</button>
+        <button class="chur-card-del chur-admin-only" onclick="event.stopPropagation();churDelChurrasco(${chur.id})" title="Excluir churrasco">🗑</button>
         <div class="chur-card-arrow">▾</div>
       </div>
       <div class="chur-card-body">
@@ -3805,9 +4787,6 @@ function openEditPlayer(id){
 
   document.getElementById('ep-name').value  = p.name;
   document.getElementById('ep-level').value = playerLevelVal(p);
-  document.getElementById('ep-fee').value    = p.customFee != null ? p.customFee : '';
-  document.getElementById('ep-joined').value = (p.joinedY != null && p.joinedM != null)
-    ? `${p.joinedY}-${String(p.joinedM+1).padStart(2,'0')}` : '';
   epLevelChange(playerLevelVal(p));
   document.getElementById('ep-modal-overlay').style.display = 'flex';
   setTimeout(() => document.getElementById('ep-name').focus(), 100);
@@ -3818,11 +4797,17 @@ function closeEditPlayer(){
   _editPlayerId = null;
 }
 
-function epLevelChange(val){
-  const feeWrap = document.getElementById('ep-fee-wrap');
-  if(feeWrap) feeWrap.style.display = val === 'guest' ? 'none' : '';
-  const joinedWrap = document.getElementById('ep-joined-wrap');
-  if(joinedWrap) joinedWrap.style.display = val === 'guest' ? 'none' : '';
+// Mensalidade individual e mês de ingresso agora ficam em Financeiro › Pessoas
+// (o Elenco cuida só de partidas: nome, nível e posição).
+function epLevelChange(val){}
+
+// Depois de qualquer mudança no Elenco, o Financeiro (só admin) se ajusta:
+// cria a pessoa do novo jogador, propaga renomeações para todo o histórico, etc.
+function finAfterRosterChange(){
+  if(!finIsAdmin()) return;
+  if(finNormalize()) finSave(finData);
+  syncFeeStatus();
+  renderFin();
 }
 
 function saveEditPlayer(){
@@ -3835,57 +4820,33 @@ function saveEditPlayer(){
   const dup = players.find(x => x.id !== p.id && x.name.toLowerCase() === name.toLowerCase());
   if(dup){ toast('⚠️ Nome já existe.'); return; }
 
-  const fee     = parseFloat(document.getElementById('ep-fee').value);
   const oldName = p.name;          // capture before rename
   const wasGuest = p.isGuest;
   p.name      = name;
   p.isGuest   = lvl === 'guest';
   p.isGK      = lvl === 'gk';
   p.stars     = (lvl === 'gk' || lvl === 'guest') ? 1 : parseInt(lvl);
-  p.customFee = (!p.isGuest && !isNaN(fee) && fee > 0) ? fee : null;
-
-  const joinedVal = document.getElementById('ep-joined').value; // formato "AAAA-MM" ou ""
-  if(joinedVal){
-    const [jy, jm] = joinedVal.split('-').map(Number);
-    p.joinedY = jy;
-    p.joinedM = jm - 1; // input é 1-indexado, sistema usa 0-indexado
-  } else {
-    p.joinedY = null;
-    p.joinedM = null;
-  }
   save(players);
 
-  // ── Sincronizar Financeiro ──────────────────────────────────
-  const md = finMonthData();
-
-  if(p.isGuest){
-    // Remove do paid (mensalidades) — usando nome antigo e novo
+  // ── Sincronizar Financeiro (somente Administrador) ──────────
+  // A renomeação é propagada para TODOS os meses (antes só o mês aberto).
+  if(finIsAdmin() && p.isGuest && !wasGuest){
+    // Comportamento mantido: ao virar convidado, sai da mensalidade do mês atual
+    const now = new Date();
+    const md  = finMonthDataOf(finData, now.getFullYear(), now.getMonth());
+    const pp  = finPeopleOf().find(x => x.playerId === p.id);
     md.paid = md.paid.filter(n => n !== oldName && n !== name);
-    // NÃO cria recv automaticamente — usuário deve adicionar em
-    // Convidados/Avulsos com o valor correto manualmente
-    finSave(finData);
-    syncFeeStatus();
-    toast('✅ ' + name + ' marcado como convidado! Adicione o valor na seção Convidados/Avulsos do Financeiro.');
-    closeEditPlayer();
-    renderRoster();
-    renderFin();
-    return;
-  } else if(wasGuest){
-    // Era convidado, virou membro — garante que não está em recvs como convidado
-    // (não remove automaticamente pois pode já ter sido pago; apenas garante que
-    //  fee status é atualizado)
-    syncFeeStatus();
-  } else if(oldName !== name){
-    // Só renomeou — atualiza nome no paid list
-    const idx = md.paid.indexOf(oldName);
-    if(idx >= 0){ md.paid[idx] = name; }
-    finSave(finData);
+    if(pp) delete md.fees[pp.id];
   }
+  finAfterRosterChange();
 
   closeEditPlayer();
   renderRoster();
-  renderFin();
-  toast('✅ ' + name + ' atualizado!');
+  if(p.isGuest && !wasGuest){
+    toast('✅ ' + name + ' marcado como convidado! Cobre em Financeiro › Lançamentos (receitas avulsas).');
+  } else {
+    toast('✅ ' + name + ' atualizado!');
+  }
 }
 
 function upd(id,field,val){
@@ -3905,6 +4866,7 @@ function delP(id){
     () => {
       players=players.filter(x=>x.id!==id);
       save(players); renderRoster();
+      finAfterRosterChange(); // histórico financeiro da pessoa é mantido
       toast('🗑 ' + p.name + ' removido.');
     }
   );
@@ -3918,6 +4880,7 @@ function addPlayer(){
   const now = new Date();
   players.push({id:Date.now(),name,stars:1,isGK:false,isGuest:false,fee:'ok',present:false,declined:false,customFee:null,joinedY:now.getFullYear(),joinedM:now.getMonth()});
   save(players);inp.value='';renderRoster();
+  finAfterRosterChange(); // cria a pessoa vinculada no Financeiro
   toast('✅ '+name+' adicionado!');
 }
 
@@ -4000,7 +4963,16 @@ function backupImportFile(evt){
         // Backups antigos podem não ter churData — mantém compatibilidade
         if(data.churData) localStorage.setItem(CHUR_KEY, JSON.stringify(data.churData));
         toast('✅ Backup restaurado! Recarregando...');
-        setTimeout(() => location.reload(), 900);
+        // Envia também para a nuvem (antes o primeiro sync após recarregar
+        // sobrescrevia o backup importado com os dados antigos da nuvem).
+        const pushes = finIsAdmin() ? [
+          fbPush('players', data.players),
+          fbPush('finData', data.finData),
+          data.churData ? fbPush('churrasco', data.churData) : null
+        ].filter(Boolean) : [];
+        const reload = () => setTimeout(() => location.reload(), 300);
+        if(pushes.length) Promise.all(pushes).then(reload, reload);
+        else setTimeout(() => location.reload(), 900);
       }
     );
     evt.target.value = ''; // permite selecionar o mesmo arquivo novamente depois
@@ -4028,7 +5000,7 @@ function fbPush(doc, data){
   const ts = Date.now();
   _fbLastWriteTs[doc] = ts;
   setSyncStatus('syncing');
-  fbDB.collection('ufg').doc(doc).set({ data, updatedAt: ts })
+  return fbDB.collection('ufg').doc(doc).set({ data, updatedAt: ts })
     .then(() => setSyncStatus('synced'))
     .catch(err => { console.warn('Firestore write ('+doc+'):', err.message); setSyncStatus('error'); });
 }
@@ -4077,7 +5049,8 @@ function fbStartSync(){
     }
     players = d.data;
     localStorage.setItem(KEY, JSON.stringify(players));
-    renderPresence(); renderRoster(); syncFeeStatus();
+    renderPresence(); renderRoster();
+    finAfterRosterChange(); // admin: propaga renomeações/novos jogadores ao Financeiro
     setSyncStatus('synced');
   }, err => { console.warn('Firestore sync (players):', err.message); setSyncStatus('error'); });
 
@@ -4094,27 +5067,33 @@ function fbStartSync(){
     setSyncStatus('synced');
   }, err => { console.warn('Firestore sync (gameTime):', err.message); setSyncStatus('error'); });
 
+  // Churrasco — admin e jogador (o jogador também lança e marca pagamentos)
+  _fbUnsubChur = fbDB.collection('ufg').doc('churrasco').onSnapshot(snap => {
+    if(!snap.exists) return;
+    const d = snap.data();
+    if(d.updatedAt === _fbLastWriteTs.churrasco) return;
+    churData = d.data;
+    localStorage.setItem(CHUR_KEY, JSON.stringify(churData));
+    renderChur();
+    setSyncStatus('synced');
+  }, err => { console.warn('Firestore sync (churrasco):', err.message); setSyncStatus('error'); });
+
   // Financeiro — só sincroniza (lê) quando logado como admin
   if(currentRole === 'admin'){
     _fbUnsubFin = fbDB.collection('ufg').doc('finData').onSnapshot(snap => {
       if(!snap.exists) return;
       const d = snap.data();
       if(d.updatedAt === _fbLastWriteTs.finData) return;
+      if(!d.data || !d.data.months) return; // documento inválido: nunca substitui os dados locais
       finData = d.data;
       localStorage.setItem(FIN_KEY, JSON.stringify(finData));
+      // Migração v2 + recorrências do mês; grava de volta só se algo mudou
+      if(finNormalize()) finSave(finData);
+      syncFeeStatus();
       renderFin();
       setSyncStatus('synced');
     }, err => { console.warn('Firestore sync (finData):', err.message); setSyncStatus('error'); });
 
-    _fbUnsubChur = fbDB.collection('ufg').doc('churrasco').onSnapshot(snap => {
-      if(!snap.exists) return;
-      const d = snap.data();
-      if(d.updatedAt === _fbLastWriteTs.churrasco) return;
-      churData = d.data;
-      localStorage.setItem(CHUR_KEY, JSON.stringify(churData));
-      renderChur();
-      setSyncStatus('synced');
-    }, err => { console.warn('Firestore sync (churrasco):', err.message); setSyncStatus('error'); });
   }
 }
 
@@ -4129,7 +5108,7 @@ function fbMarkPresenceInteraction(){
       players = _pendingRemotePlayers;
       _pendingRemotePlayers = null;
       localStorage.setItem(KEY, JSON.stringify(players));
-      renderPresence(); renderRoster(); syncFeeStatus();
+      renderPresence(); renderRoster(); finAfterRosterChange();
     }
   }, 400);
 }
@@ -4163,7 +5142,8 @@ if(fbAuth){
 renderPresence();
 updateStats();
 finPopulateCatSelect('fin-exp-cat');
-// Sync financial status on load (current month)
+recFormInit();
+// Sync financial status on load (current month) — só tem efeito para o admin
 syncFeeStatus();
 // Protege toques na grade de Presença contra perda por re-render simultâneo (ver fbMarkPresenceInteraction)
 document.getElementById('presence-list').addEventListener('pointerdown', fbMarkPresenceInteraction);
@@ -4232,10 +5212,18 @@ function showApp(){
   } else {
     document.body.classList.add('player-mode-ro');
   }
+  // Churrasco: dentro do Financeiro (admin) ou em aba própria (jogador)
+  const churBox = document.getElementById('chur-content');
+  document.getElementById(currentRole === 'admin' ? 'fin-sub-chur' : 'tab-chur').appendChild(churBox);
+  renderChur();
   // Force re-render to apply restrictions
   renderPresence();
   renderRoster();
-  if(currentRole !== 'player') renderFin();
+  if(currentRole === 'admin'){
+    // Pessoas, mensalidades (valor congelado) e recorrências até o mês atual
+    if(finNormalize()) finSave(finData);
+    renderFin();
+  }
   syncFeeStatus();
 }
 
