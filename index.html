@@ -1473,7 +1473,9 @@ textarea.wa-preview:focus { border-color:var(--gold); }
 .fin-exp-item, .fin-recv-item { gap:6px; padding-left:8px; padding-right:8px; }
 .fin-exp-desc, .fin-recv-name { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .fin-exp-val, .fin-recv-amt { font-size:11px; }
-@media(max-width:400px){ .fin-exp-cat { display:none; } }
+@media(max-width:400px){ .fin-exp-cat { display:none; } .fin-recv-cat b { display:none; } }
+.fin-recv-cat { font-size:10px; font-weight:700; color:var(--muted); background:var(--surface2); border-radius:4px; padding:1px 5px; flex-shrink:0; white-space:nowrap; }
+.fin-recv-cat b { font-weight:700; }
 /* iOS/Android: input de data tem largura mínima própria e empurrava a tela para o lado */
 input[type="date"], input[type="month"] { min-width:0; max-width:100%; -webkit-appearance:none; appearance:none; }
 input[type="date"]::-webkit-date-and-time-value { text-align:left; }
@@ -1535,6 +1537,8 @@ body { max-width:100%; overflow-x:clip; }
 .fin-modal-row label.chk-label { display:flex; text-transform:none; letter-spacing:0; font-size:12px; font-weight:700; color:var(--white); margin:0; cursor:pointer; }
 .fin-modal-row label.chk-label input { width:16px; height:16px; accent-color:var(--gold); flex-shrink:0; }
 .fin-modal-row label.chk-label span { text-transform:none; letter-spacing:0; font-size:11px; }
+
+.fin-modal-row label.chur-multi-item, #recv-multi-list label.chur-multi-item { display:flex; text-transform:none; letter-spacing:0; font-size:12px; font-weight:700; color:var(--white); margin:0; }
 
 /* ─── CALENDÁRIO PRÓPRIO (no lugar do calendário nativo do celular) ── */
 .ufg-date-btn {
@@ -1873,19 +1877,24 @@ body:not(.player-mode-ro) .tab-chur-btn { display:none !important; }
     <!-- ════ LANÇAMENTOS ════ -->
     <div class="fin-sub" id="fin-sub-entries">
       <!-- ── CONTAS A RECEBER (convidados e avulsos) ── -->
-      <div class="section-label">🤝 Receitas Avulsas / Convidados</div>
+      <div class="section-label">🤝 Receitas Avulsas</div>
       <div class="fin-hint">
-        Cobranças pontuais — convidados, reposições, patrocínio etc. Mensalistas devem ser cobrados em <b>Mensalidades</b> (evita cobrança em dobro).
+        Convidados, rateio da bola, patrocínio etc. — cada uma com sua <b>categoria</b>, para o fechamento não misturar com a mensalidade (que fica em <b>Mensalidades</b>).
       </div>
 
       <div class="add-form fin-exp-form" style="margin-bottom:6px">
-        <input class="input-txt" id="fin-recv-name" type="text" placeholder="Nome / apelido ou descrição" maxlength="40" list="fin-people-list">
+        <input class="input-txt" id="fin-recv-name" type="text" placeholder="Nome / apelido" maxlength="40" list="fin-people-list">
+        <div class="fin-exp-form-row2">
+          <select class="input-txt" id="fin-recv-cat"></select>
+          <input class="input-txt" id="fin-recv-note" type="text" maxlength="30" placeholder="Detalhe (ex: Bola nova)" style="flex:1 1 0">
+        </div>
         <div class="fin-exp-form-row2">
           <input class="input-txt" id="fin-recv-due" type="number" min="1" max="31" inputmode="numeric" placeholder="Dia" title="Dia do vencimento (vazio = fim do mês)" style="flex:0 0 58px">
           <input class="input-txt" id="fin-recv-val" type="number" min="0" step="0.01" placeholder="R$" style="flex:0 0 80px">
           <button class="btn btn-gold" onclick="finAddRecv()">➕</button>
         </div>
       </div>
+      <button type="button" class="btn btn-outline btn-sm" style="width:100%;margin-bottom:8px" onclick="recvMultiOpen()">👥 Lançar para várias pessoas (ex: rateio da bola)</button>
 
       <div id="fin-recv-list"></div>
 
@@ -1960,6 +1969,12 @@ body:not(.player-mode-ro) .tab-chur-btn { display:none !important; }
       <div class="fin-hint">
         Basta o nome ou apelido. Quem é adicionado no Elenco aparece aqui como 🆕 <b>Novo</b> e <b>não</b> é cobrado — toque em ✏️ e marque “Paga mensalidade” para incluir. Use também para sócios ou quem paga sem jogar.
       </div>
+      <div class="fin-fee-config">
+        <label>💵 Valor do convidado R$
+          <input id="pp-guest-fee" type="number" min="0" step="0.5" class="fin-mini-input" onchange="ppSetGuestFee(this.value)">
+        </label>
+      </div>
+      <div class="fin-hint">Toque em 💵 ao lado de um convidado para lançar o valor como <b>recebido</b> no mês aberto (vai para Lançamentos › Receitas, categoria Convidado).</div>
       <div class="add-form">
         <input class="input-txt" id="pp-new-name" type="text" maxlength="30" placeholder="Nome ou apelido"
           onkeydown="if(event.key==='Enter')ppAdd()">
@@ -2021,6 +2036,12 @@ body:not(.player-mode-ro) .tab-chur-btn { display:none !important; }
         <div class="fin-modal-field">
           <label>Dia do vencimento <span style="color:var(--muted);font-weight:400">— vazio = fim do mês</span></label>
           <input class="input-txt" id="fin-modal-due" type="number" min="1" max="31" inputmode="numeric" placeholder="Dia">
+        </div>
+      </div>
+      <div class="fin-modal-row" id="fin-modal-note-wrap" style="display:none">
+        <div class="fin-modal-field">
+          <label>Detalhe <span style="color:var(--muted);font-weight:400">— opcional (ex: Bola nova)</span></label>
+          <input class="input-txt" id="fin-modal-note" type="text" maxlength="30" placeholder="Detalhe">
         </div>
       </div>
       <div class="fin-modal-row" id="fin-modal-cat-wrap" style="display:none">
@@ -2146,6 +2167,31 @@ body:not(.player-mode-ro) .tab-chur-btn { display:none !important; }
     <div class="fin-modal-actions" style="margin-top:16px">
       <button class="btn btn-gold" style="flex:1" onclick="vagasModalOk()">📤 Gerar Lista</button>
       <button class="btn btn-ghost" onclick="vagasModalCancel()">Cancelar</button>
+    </div>
+  </div>
+</div>
+<div id="recv-multi-modal-overlay" class="fin-modal-overlay" style="display:none" onclick="if(event.target===this)recvMultiClose()">
+  <div class="fin-modal" onclick="event.stopPropagation()">
+    <div class="fin-modal-title">
+      <span>👥 Lançar para Várias Pessoas</span>
+      <button class="fin-modal-close" onclick="recvMultiClose()">✕</button>
+    </div>
+    <div class="fin-modal-row" style="flex-direction:column;gap:9px">
+      <div class="rec-row">
+        <select class="input-txt" id="recv-multi-cat"></select>
+        <input class="input-txt" id="recv-multi-val" type="number" min="0" step="0.01" placeholder="R$ cada">
+      </div>
+      <input class="input-txt" id="recv-multi-note" type="text" maxlength="30" placeholder="Detalhe (ex: Bola nova)">
+      <label class="chk-label" style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--white)">
+        <input type="checkbox" id="recv-multi-paid" checked> ✅ Já recebido
+      </label>
+      <input class="input-txt" id="recv-multi-search" type="text" placeholder="🔎 Buscar..." oninput="recvMultiFilter()">
+      <button type="button" class="btn btn-outline btn-sm" style="width:100%" onclick="recvMultiToggleAll()">✅ Marcar / Desmarcar Todos</button>
+      <div id="recv-multi-list" class="chur-multi-list"></div>
+    </div>
+    <div class="fin-modal-actions" style="margin-top:14px">
+      <button class="btn btn-gold" style="flex:1" onclick="recvMultiConfirm()">➕ Lançar</button>
+      <button class="btn btn-ghost" onclick="recvMultiClose()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -2952,7 +2998,8 @@ function finGenerateRecurrences(d){
       const md = finMonthDataOf(d, y, m);
       if(rec.kind === 'in'){
         md.recvs.push({ id: md.recvNextId++, name: recEntryLabel(rec, d), val: Number(rec.val), paid: false,
-                        due: iso, recId: rec.id, recKey: key, personId: rec.personId || null });
+                        due: iso, recId: rec.id, recKey: key, personId: rec.personId || null,
+                        cat: RECV_CATEGORIES.includes(rec.cat) ? rec.cat : 'Outros' });
       } else {
         md.expenses.push({ id: md.expNextId++, desc: rec.desc, val: Number(rec.val), paid: false,
                            cat: rec.cat || 'Outros', due: iso, recId: rec.id, recKey: key });
@@ -3061,28 +3108,41 @@ function syncFeeStatus(){
 }
 
 // ─── RECEIVABLES (contas a receber — convidados/avulsos) ──────
+// Categoria de cada receita avulsa: separa no fechamento o que é convidado,
+// o que é rateio/extra (ex.: bola) etc. — assim nome de mensalista não parece
+// mensalidade repetida. Lançamentos antigos sem categoria contam como Convidado.
+const RECV_CATEGORIES = ['Convidado','Rateio / Extra','Patrocínio','Evento','Outros'];
+const RECV_CAT_ICON = { 'Convidado':'🤝', 'Rateio / Extra':'⚽', 'Patrocínio':'🏷️', 'Evento':'🎉', 'Outros':'📌' };
+function finRecvCat(r){ return r.cat || (r.recId ? 'Outros' : 'Convidado'); }
+function finRecvLabel(r){ return r.note ? `${r.name} · ${r.note}` : r.name; }
+function finGuestFee(){ return Number(finData.guestFee) > 0 ? Number(finData.guestFee) : 5; }
+
 function finAddRecv(){
   const name = document.getElementById('fin-recv-name').value.trim();
   const val  = parseFloat(document.getElementById('fin-recv-val').value)||0;
   const due  = finDueFromDay(document.getElementById('fin-recv-due').value);
+  const cat  = document.getElementById('fin-recv-cat').value || 'Convidado';
+  const note = document.getElementById('fin-recv-note').value.trim();
   if(!name || val <= 0){ toast('⚠️ Preencha nome e valor.'); return; }
   const pp = personByName(name);
   const doAdd = () => {
     const md = finMonthData();
     md.recvs.push({ id: md.recvNextId++, name: pp ? personName(pp) : name, val, paid: false,
-                    due, personId: pp ? pp.id : null });
+                    due, personId: pp ? pp.id : null, cat, note: note || null });
     finSave(finData);
     document.getElementById('fin-recv-name').value = '';
     document.getElementById('fin-recv-val').value  = '';
     document.getElementById('fin-recv-due').value  = '';
+    document.getElementById('fin-recv-note').value = '';
     renderFin();
     toast('✅ Receita adicionada!');
   };
-  // Proteção contra cobrança em dobro: mensalista já é cobrado em Mensalidades
-  if(pp && personIsMensalista(pp) && personActiveIn(pp, finYear, finMonth)){
+  // Proteção contra cobrança em dobro: mensalista lançado como CONVIDADO
+  // (extras como rateio da bola são legítimos e não pedem confirmação)
+  if(cat === 'Convidado' && pp && personIsMensalista(pp) && personActiveIn(pp, finYear, finMonth)){
     finConfirm(
       '⚠️ Possível cobrança duplicada',
-      `${personName(pp)} é mensalista e já é cobrado(a) em Mensalidades. Registrar esta receita avulsa mesmo assim? (Use só para valores extras, nunca para a mensalidade.)`,
+      `${personName(pp)} é mensalista e já é cobrado(a) em Mensalidades. Lançar como convidado mesmo assim? Para valores extras (ex.: bola), use a categoria "Rateio / Extra".`,
       doAdd, null, '➕ Registrar'
     );
     return;
@@ -3184,15 +3244,16 @@ function renderFin(){
   // Keep fee input in sync
   document.getElementById('fin-fee-val').value = finMonthData().feeValue||15;
   document.getElementById('fin-fee-due').value = finData.feeDueDay || '';
+  document.getElementById('pp-guest-fee').value = finGuestFee();
 }
 
 function finFmt(v){ return 'R$ ' + (Number(v)||0).toFixed(2).replace('.',','); }
 
 // Popula um <select> de categoria a partir de EXP_CATEGORIES (fonte única)
-function finPopulateCatSelect(id, selected){
+function finPopulateCatSelect(id, selected, list){
   const sel = document.getElementById(id);
   if(!sel) return;
-  sel.innerHTML = EXP_CATEGORIES.map(c =>
+  sel.innerHTML = (list || EXP_CATEGORIES).map(c =>
     `<option value="${c}" ${c===selected?'selected':''}>${c}</option>`).join('');
 }
 
@@ -3470,7 +3531,8 @@ function renderFinRecv(){
     const lbl  = st === 'paid' ? finFmt(r.val) : (st === 'overdue' ? `${finFmt(r.val)} vencido` : `${finFmt(r.val)} pendente`);
     return `<div class="fin-recv-item ${cls}" onclick="finToggleRecv(${r.id})">
       <div class="fin-recv-check">${icon}</div>
-      <span class="fin-recv-name">${finEsc(r.name)}</span>
+      <span class="fin-recv-cat" title="${finEsc(finRecvCat(r))}">${RECV_CAT_ICON[finRecvCat(r)] || '📌'}<b> ${finEsc(finRecvCat(r).split(' ')[0])}</b></span>
+      <span class="fin-recv-name">${finEsc(finRecvLabel(r))}</span>
       ${finEntryBadges(r, finYear, finMonth)}
       <span class="fin-recv-amt">${lbl}</span>
       <button class="fin-edit-btn" onclick="event.stopPropagation();finOpenModal('recv',${r.id})" title="Editar">✏️</button>
@@ -3499,6 +3561,7 @@ function finOpenModal(type, id){
     titleEl.textContent = '✏️ Editar Gasto';
     document.getElementById('fin-modal-desc-wrap').style.display = '';
     document.getElementById('fin-modal-cat-wrap').style.display  = '';
+    document.getElementById('fin-modal-note-wrap').style.display = 'none';
     descInp.value = e.desc;
     valInp.value  = e.val;
     document.getElementById('fin-modal-due').value = e.due ? Number(e.due.slice(8)) : '';
@@ -3508,11 +3571,14 @@ function finOpenModal(type, id){
     if(!r) return;
     titleEl.textContent = '✏️ Editar Receita';
     document.getElementById('fin-modal-desc-wrap').style.display = '';
-    document.getElementById('fin-modal-cat-wrap').style.display  = 'none';
-    descInp.placeholder = 'Nome (ex: Convidado)';
+    document.getElementById('fin-modal-cat-wrap').style.display  = '';
+    document.getElementById('fin-modal-note-wrap').style.display = '';
+    descInp.placeholder = 'Nome / apelido';
     descInp.value = r.name;
     valInp.value  = r.val;
     document.getElementById('fin-modal-due').value = r.due ? Number(r.due.slice(8)) : '';
+    document.getElementById('fin-modal-note').value = r.note || '';
+    finPopulateCatSelect('fin-modal-cat', finRecvCat(r), RECV_CATEGORIES);
   }
 
   overlay.style.display = 'flex';
@@ -3540,7 +3606,11 @@ function finModalSave(){
     if(e){ e.desc = desc; e.val = val; e.due = due; e.cat = document.getElementById('fin-modal-cat').value || 'Outros'; }
   } else {
     const r = md.recvs.find(x => x.id === _modalId);
-    if(r){ r.name = desc; r.val = val; r.due = due; }
+    if(r){
+      r.name = desc; r.val = val; r.due = due;
+      r.cat  = document.getElementById('fin-modal-cat').value || 'Convidado';
+      r.note = document.getElementById('fin-modal-note').value.trim() || null;
+    }
   }
 
   finSave(finData);
@@ -3615,6 +3685,7 @@ document.addEventListener('keydown', e => {
   document.getElementById('chur-multi-modal-overlay').style.display = 'none';
   document.getElementById('pp-modal-overlay').style.display = 'none';
   document.getElementById('dp-overlay').style.display = 'none';
+  document.getElementById('recv-multi-modal-overlay').style.display = 'none';
 });
 
 // Expande/recolhe as seções colapsáveis da aba Financeiro (Resumo Anual, Backup)
@@ -3773,14 +3844,20 @@ function finSendWA(){
 
   msg += `💰 Subtotal mensalidades: *${finFmt(feesIn)}*\n`;
 
-  // Convidados / avulsos
+  // Receitas avulsas — uma seção por categoria (convidados ≠ rateio da bola ≠ mensalidade)
   if((md.recvs||[]).length){
-    msg += `\n${sep2}\n`;
-    msg += `🤝 *CONVIDADOS / AVULSOS*\n`;
-    msg += `${sep2}\n`;
-    recvPaid.forEach(r => msg += `  ✅ ${r.name}: *${finFmt(r.val)}*\n`);
-    recvPend.forEach(r => msg += `  ${recvLate(r) ? '⚠️' : '⏳'} ${r.name}: ${finFmt(r.val)} _(${recvLate(r) ? 'vencido' : 'a receber'})_\n`);
-    msg += `💰 Subtotal recebido: *${finFmt(recvIn)}*\n`;
+    RECV_CATEGORIES.forEach(cat => {
+      const items = md.recvs.filter(r => finRecvCat(r) === cat);
+      if(!items.length) return;
+      const got = items.filter(r => r.paid).reduce((s,r) => s + r.val, 0);
+      msg += `\n${sep2}\n`;
+      msg += `${RECV_CAT_ICON[cat] || '📌'} *${cat.toUpperCase()}${cat === 'Convidado' ? 'S' : ''}*\n`;
+      msg += `${sep2}\n`;
+      items.filter(r => r.paid).forEach(r => msg += `  ✅ ${finRecvLabel(r)}: *${finFmt(r.val)}*\n`);
+      items.filter(r => !r.paid).forEach(r => msg += `  ${recvLate(r) ? '⚠️' : '⏳'} ${finRecvLabel(r)}: ${finFmt(r.val)} _(${recvLate(r) ? 'vencido' : 'a receber'})_\n`);
+      msg += `💰 Subtotal: *${finFmt(got)}*\n`;
+    });
+    msg += `\n💰 Total receitas avulsas recebidas: *${finFmt(recvIn)}*\n`;
     if(recvPend.length){
       const pendVal = recvPend.reduce((s,r)=>s+r.val,0);
       msg += `⌛ A receber: *${finFmt(pendVal)}*\n`;
@@ -3903,8 +3980,8 @@ function finSendCobranca(){
   if(recvPend.length){
     const label = recvOverdue ? 'vencidos' : 'pendentes';
     const icon  = recvOverdue ? '⚠️' : '🤝';
-    msg += `\n\n${icon} *Convidados/avulsos ${label} (${recvPend.length}):*\n`;
-    msg += recvPend.map(r => `• ${r.name} — ${finFmt(r.val)}`).join('\n');
+    msg += `\n\n${icon} *Avulsos ${label} (${recvPend.length}):*\n`;
+    msg += recvPend.map(r => `• ${finRecvLabel(r)} — ${finFmt(r.val)} _(${finRecvCat(r)})_`).join('\n');
   }
 
   msg += `\n\n`;
@@ -4265,7 +4342,7 @@ function renderPeople(){
         <div class="pp-name">${finEsc(personName(pp))}${badges.join('')}</div>
         <div class="pp-meta">${meta.join(' · ') || '—'}</div>
       </div>
-      <div class="rec-actions"><button onclick="ppOpen(${pp.id})" title="Editar">✏️</button></div>
+      <div class="rec-actions">${(!personIsMensalista(pp) && isActive(pp)) ? `<button onclick="ppChargeGuest(${pp.id})" title="Lançar ${finFmt(finGuestFee())} recebido (convidado)">💵</button>` : ''}<button onclick="ppOpen(${pp.id})" title="Editar">✏️</button></div>
     </div>`;
   }).join('');
 }
@@ -5231,6 +5308,96 @@ if(fbAuth){
   fbAuth.onAuthStateChanged(user => { if(user) fbStartSync(); else fbStopSync(); });
 }
 
+// ─── CONVIDADO: LANÇAMENTO RÁPIDO A PARTIR DE PESSOAS ──────────
+function ppSetGuestFee(v){
+  const val = parseFloat(v);
+  finData.guestFee = val > 0 ? val : 5;
+  finSave(finData);
+  renderFin();
+}
+
+function ppChargeGuest(id){
+  const pp = personById(id);
+  if(!pp) return;
+  const md   = finMonthData();
+  const name = personName(pp);
+  const val  = finGuestFee();
+  const doIt = () => {
+    md.recvs.push({ id: md.recvNextId++, name, val, paid: true, paidAt: finTodayISO(),
+                    due: null, personId: pp.id, cat: 'Convidado', note: null });
+    finSave(finData);
+    renderFin();
+    toast(`✅ ${name}: ${finFmt(val)} recebido em ${MONTHS[finMonth]} (Lançamentos)`);
+  };
+  const already = md.recvs.filter(r => r.personId === pp.id && finRecvCat(r) === 'Convidado').length;
+  if(already){
+    finConfirm('🤝 Lançar de novo?',
+      `${name} já tem ${already} lançamento(s) de convidado em ${MONTHS[finMonth]}. Lançar mais ${finFmt(val)} (ex.: veio em outra sexta)?`,
+      doIt, null, '💵 Lançar');
+    return;
+  }
+  doIt();
+}
+
+// ─── RECEITA PARA VÁRIAS PESSOAS (ex.: rateio da bola) ─────────
+function recvMultiOpen(){
+  finPopulateCatSelect('recv-multi-cat', 'Rateio / Extra', RECV_CATEGORIES);
+  document.getElementById('recv-multi-val').value = '';
+  document.getElementById('recv-multi-note').value = '';
+  document.getElementById('recv-multi-search').value = '';
+  document.getElementById('recv-multi-paid').checked = true;
+  const list = finPeopleOf().filter(pp => pp.active !== false && (pp.playerId == null || personPlayer(pp)))
+    .sort((a,b) => personName(a).localeCompare(personName(b)));
+  document.getElementById('recv-multi-list').innerHTML = list.length
+    ? list.map(pp => `<label class="chur-multi-item" data-name="${finEsc(personName(pp).toLowerCase())}">
+        <input type="checkbox" value="${pp.id}"><span>${finEsc(personName(pp))}</span></label>`).join('')
+    : '<div class="chur-multi-empty">Nenhuma pessoa cadastrada.</div>';
+  document.getElementById('recv-multi-modal-overlay').style.display = 'flex';
+}
+
+function recvMultiClose(){ document.getElementById('recv-multi-modal-overlay').style.display = 'none'; }
+
+function recvMultiFilter(){
+  const term = document.getElementById('recv-multi-search').value.trim().toLowerCase();
+  document.querySelectorAll('#recv-multi-list .chur-multi-item').forEach(el => {
+    el.style.display = (!term || el.dataset.name.includes(term)) ? '' : 'none';
+  });
+}
+
+function recvMultiToggleAll(){
+  const boxes = [...document.querySelectorAll('#recv-multi-list input[type="checkbox"]')]
+    .filter(b => b.closest('.chur-multi-item').style.display !== 'none');
+  const all = boxes.length && boxes.every(b => b.checked);
+  boxes.forEach(b => b.checked = !all);
+}
+
+function recvMultiConfirm(){
+  const cat  = document.getElementById('recv-multi-cat').value || 'Rateio / Extra';
+  const val  = parseFloat(document.getElementById('recv-multi-val').value) || 0;
+  const note = document.getElementById('recv-multi-note').value.trim() || null;
+  const paid = document.getElementById('recv-multi-paid').checked;
+  const ids  = [...document.querySelectorAll('#recv-multi-list input:checked')].map(b => Number(b.value));
+  if(val <= 0){ toast('⚠️ Informe o valor por pessoa.'); return; }
+  if(!ids.length){ toast('⚠️ Marque ao menos uma pessoa.'); return; }
+  const md = finMonthData();
+  let added = 0, skipped = 0;
+  ids.forEach(id => {
+    const pp = personById(id);
+    if(!pp) return;
+    // Evita lançar duas vezes o mesmo rateio para a mesma pessoa no mês
+    const dup = md.recvs.some(r => r.personId === pp.id && finRecvCat(r) === cat
+                                && (r.note || null) === note && Number(r.val) === val);
+    if(dup){ skipped++; return; }
+    md.recvs.push({ id: md.recvNextId++, name: personName(pp), val, paid, paidAt: paid ? finTodayISO() : null,
+                    due: null, personId: pp.id, cat, note });
+    added++;
+  });
+  finSave(finData);
+  recvMultiClose();
+  renderFin();
+  toast(`✅ ${added} lançamento(s) de ${finFmt(val)}${skipped ? ` · ${skipped} já tinham (ignorados)` : ''}`);
+}
+
 // ─── CALENDÁRIO PRÓPRIO ─────────────────────────────────────
 // Substitui o calendário nativo do celular. O <input hidden> mantém o mesmo id
 // e o mesmo formato de valor (AAAA-MM-DD ou AAAA-MM), então o resto do código
@@ -5340,6 +5507,7 @@ function dpPickToday(){
 renderPresence();
 updateStats();
 finPopulateCatSelect('fin-exp-cat');
+finPopulateCatSelect('fin-recv-cat', 'Convidado', RECV_CATEGORIES);
 initDatePickers();
 recFormInit();
 // Sync financial status on load (current month) — só tem efeito para o admin
