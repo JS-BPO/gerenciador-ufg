@@ -9,6 +9,16 @@
 <meta property="og:description" content="Rachão de Sexta · União Figueira Grande — confirme sua presença em 1 toque.">
 <meta property="og:url" content="https://js-bpo.github.io/gerenciador-ufg/">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://js-bpo.github.io/gerenciador-ufg/icon-512.png">
+<!-- Ícone e nome na tela inicial do celular (arquivos ao lado do index.html no GitHub) -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#0A0A0A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="UFG">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <style>
 /* ─── DESIGN TOKENS ───────────────────────────────────────── */
 :root {
@@ -2367,7 +2377,36 @@ const DEF_NAMES=['Alex','Darlan','Diego','Eduardo','Emerson','Fernando',
 const GK_DEF=['Diego','Lucas'];
 
 function load(){try{const r=localStorage.getItem(KEY);if(r)return JSON.parse(r);}catch(e){}return null;}
+// ─── ZERAR A LISTA AUTOMATICAMENTE APÓS O DIA DO JOGO ─────────
+// Cada marcação (✓ vai / ✕ não vai) leva o "ciclo" do jogo a que pertence
+// (data do próximo jogo, AAAA-MM-DD). Virou o dia seguinte ao jogo, o ciclo muda
+// e as marcações antigas são apagadas para todos. Marcações antigas sem ciclo
+// (de antes desta função) são consideradas do jogo atual — nada some na hora.
+function listCycleKey(){
+  const d = getNextGameDate();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function listAutoReset(arr){
+  if(!Array.isArray(arr)) return false;
+  let k; try{ k = listCycleKey(); }catch(e){ return false; } // ainda carregando
+  let changed = false;
+  arr.forEach(p=>{
+    if(p.present || p.declined){
+      if(!p.markFor){ p.markFor = k; changed = true; }
+      else if(p.markFor < k){ p.present = false; p.declined = false; delete p.markFor; changed = true; }
+    } else if(p.markFor){ delete p.markFor; changed = true; }
+  });
+  return changed;
+}
+function listCheckNewCycle(){
+  if(listAutoReset(players)){
+    save(players);
+    try{ renderPresence(); clearDraw(); }catch(e){}
+  }
+}
+
 function save(p){
+  listAutoReset(p);
   localStorage.setItem(KEY,JSON.stringify(p));
   fbPush('players', p);
 }
@@ -2380,6 +2419,10 @@ function initData(){
 
 let players=initData();
 let lastDraw=null;
+// Confere a virada do ciclo ao abrir, ao voltar para o app e a cada minuto
+setTimeout(listCheckNewCycle, 0);
+setInterval(listCheckNewCycle, 60000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) listCheckNewCycle(); });
 
 // Endereço público do app (vai no final da Lista de Confirmação do WhatsApp)
 const APP_URL = 'https://js-bpo.github.io/gerenciador-ufg/';
@@ -5381,6 +5424,7 @@ function fbStartSync(){
       return;
     }
     players = d.data;
+    if(listAutoReset(players)){ save(players); try{ clearDraw(); }catch(e){} }
     localStorage.setItem(KEY, JSON.stringify(players));
     renderPresence(); renderRoster();
     finAfterRosterChange(); // admin: propaga renomeações/novos jogadores ao Financeiro
