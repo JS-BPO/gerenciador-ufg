@@ -1909,14 +1909,14 @@ body:not(.player-mode-ro) .tab-chur-btn { display:none !important; }
 
     <!-- ════ RECORRÊNCIAS ════ -->
     <div class="fin-sub" id="fin-sub-recur">
-      <div class="section-label" id="rec-form-title">🔁 Nova Recorrência</div>
+      <div class="section-label" id="rec-form-title">🔁 Nova Despesa Fixa</div>
       <div class="fin-hint">
-        Os lançamentos são gerados automaticamente até o mês atual quando o administrador abre o app — cada ocorrência é criada <b>uma única vez</b>, mesmo abrindo em vários aparelhos.
+        Contas fixas do time (quadra, arbitragem, taxas). Entram sozinhas em Lançamentos até o mês atual, <b>uma única vez</b> por período. Mensalidade não entra aqui — é marcada em <b>Pessoas</b>.
       </div>
       <div class="rec-form">
         <input type="hidden" id="rec-id">
         <div class="rec-row">
-          <select class="input-txt" id="rec-kind" onchange="recFormKindChange()">
+          <select class="input-txt" id="rec-kind" onchange="recFormKindChange()" style="display:none">
             <option value="out">📤 Despesa</option>
             <option value="in">📥 Receita</option>
           </select>
@@ -1945,7 +1945,7 @@ body:not(.player-mode-ro) .tab-chur-btn { display:none !important; }
           <label class="rec-lbl">Fim (opcional)<input id="rec-end" type="hidden" data-ufg-date="day" data-placeholder="Sem fim" data-clear="1"></label>
         </div>
         <div class="rec-row">
-          <button class="btn btn-gold" style="flex:1" id="rec-save-btn" onclick="recSave()">➕ Criar Recorrência</button>
+          <button class="btn btn-gold" style="flex:1" id="rec-save-btn" onclick="recSave()">➕ Criar Despesa Fixa</button>
           <button class="btn btn-ghost" id="rec-cancel-btn" style="display:none" onclick="recFormReset()">Cancelar</button>
         </div>
       </div>
@@ -4000,10 +4000,11 @@ function recFormReset(){
   document.getElementById('rec-month').value = String(new Date().getMonth());
   document.getElementById('rec-start').value = finTodayISO();
   document.getElementById('rec-end').value = '';
-  document.getElementById('rec-form-title').textContent = '🔁 Nova Recorrência';
-  document.getElementById('rec-save-btn').textContent = '➕ Criar Recorrência';
+  document.getElementById('rec-form-title').textContent = '🔁 Nova Despesa Fixa';
+  document.getElementById('rec-save-btn').textContent = '➕ Criar Despesa Fixa';
   document.getElementById('rec-cancel-btn').style.display = 'none';
   document.getElementById('rec-kind').disabled = false;
+  document.getElementById('rec-kind').style.display = 'none'; // novas recorrências = só despesas
   recFormKindChange();
   recFormFreqChange();
 }
@@ -4088,6 +4089,8 @@ function recEdit(id){
   document.getElementById('rec-id').value = rec.id;
   document.getElementById('rec-kind').value = rec.kind;
   document.getElementById('rec-kind').disabled = true; // trocar receita↔despesa = nova recorrência
+  // Só despesas são criadas agora; receitas antigas continuam editáveis (tipo visível e travado)
+  document.getElementById('rec-kind').style.display = rec.kind === 'in' ? '' : 'none';
   recFormKindChange();
   document.getElementById('rec-desc').value = rec.desc;
   document.getElementById('rec-val').value = rec.val;
@@ -4200,8 +4203,8 @@ function renderRecList(){
         + `<button onclick="recEnd(${rec.id})" title="Encerrar">⏹️</button>`;
     return `<div class="rec-item${st}">
       <div class="rec-main">
-        <div class="rec-title">${rec.kind === 'in' ? '📥' : '📤'} ${finEsc(rec.desc)} <span class="pp-badge">${stLbl}</span></div>
-        <div class="rec-meta">${recDescribe(rec)}</div>
+        <div class="rec-title">${rec.kind === 'in' ? '📥' : '📤'} ${finEsc(rec.desc)}</div>
+        <div class="rec-meta">${stLbl} · ${recDescribe(rec)}</div>
       </div>
       <span class="rec-val ${rec.kind}">${rec.kind === 'in' ? '+' : '-'} ${finFmt(rec.val)}</span>
       <div class="rec-actions">${actions}</div>
@@ -5402,6 +5405,14 @@ function doLogout(){
 
 function showApp(){
   document.getElementById('login-screen').style.display = 'none';
+  // Todo login (inclusive troca de operador) abre em Partidas — evita ficar numa
+  // aba que o novo operador não pode ver (ex.: Financeiro → jogador = tela preta)
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-game').classList.add('active');
+  document.querySelector('.tab-btn').classList.add('active');
+  if(typeof finSubTab === 'function') finSubTab('overview');
+  window.scrollTo(0, 0);
 
   if(currentRole === 'admin'){
     document.body.classList.remove('player-mode-ro');
