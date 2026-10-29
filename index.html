@@ -1582,6 +1582,18 @@ body { max-width:100%; overflow-x:clip; }
 .me-done .t1{font-size:16px;font-weight:900;color:#5fe88a}
 .me-out .me-done .t1{color:var(--red)}
 .me-done .t2{font-size:11px;color:var(--muted);margin-top:2px}
+.me-chur{margin-top:12px;padding:12px;border-radius:10px;background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.35)}
+.me-chur .q{font-size:14px;font-weight:800;color:var(--text,#F4EEDF);margin-bottom:10px;line-height:1.35}
+.me-chur .q small{display:block;font-weight:600;color:var(--muted);font-size:11px;margin-top:2px}
+.me-chur-btns{display:flex;gap:8px}
+.me-chur-btns button{flex:1;padding:12px 6px;border-radius:9px;font-size:13px;font-weight:900;cursor:pointer}
+.me-chur-yes{border:none;background:linear-gradient(135deg,var(--gold-dim),var(--gold));color:#000}
+.me-chur-no{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.me-chur-st{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:700}
+.me-chur-st button{background:none;border:none;color:var(--muted);font-size:11px;font-weight:700;text-decoration:underline;cursor:pointer;padding:4px}
+.chur-game-tag{display:inline-block;margin-top:3px;font-size:9px;font-weight:800;letter-spacing:.05em;color:#000;background:var(--gold);border-radius:999px;padding:2px 8px}
+.chur-edit-total{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.chur-edit-total .input-txt{flex:1;min-width:0}
 .me-share{margin-top:12px;width:100%;padding:13px 10px;border:none;border-radius:10px;background:#25D366;color:#06210f;font-size:14px;font-weight:900;letter-spacing:.02em;cursor:pointer}
 .me-share:active{transform:scale(.98)}
 .me-undo{margin-top:12px;width:100%;padding:10px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer}
@@ -2041,7 +2053,7 @@ body:not(.player-mode-ro) .tab-chur-btn { display:none !important; }
      <div id="chur-content">
       <div class="section-label">🍖 Novo Churrasco</div>
       <div style="font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.5;padding:0 2px">
-        Registre a data, o valor total gasto e adicione quem ficou. O rateio é calculado automaticamente.
+        Registre a data, o valor total gasto e adicione quem ficou. O rateio é calculado automaticamente.<br>⚽ Criou com a <b>data do próximo jogo</b>? O pessoal responde no app se fica e a Lista de Confirmação mostra quem vai ficar. O valor pode ficar em branco e ser informado depois.
       </div>
 
       <div class="add-form" style="margin-bottom:6px;flex-wrap:wrap">
@@ -2476,8 +2488,34 @@ function meAnswer(going){
   p.declined = !going;
   save(players);
   renderPresence(); clearDraw();
+  // Tem churrasco marcado para o dia do jogo e a pessoa ainda não respondeu?
+  // Pergunta primeiro e só abre o WhatsApp depois da resposta (a lista já sai com o churrasco).
+  if(going && churGameEvent() && churMyAnswer(p) === null){
+    renderMeCard();
+    toast('✅ Presença confirmada! Agora diga se fica para o churrasco 🍖');
+    return;
+  }
   toast(going ? '✅ Presença confirmada! Abrindo o WhatsApp…' : '👍 Marcado que você não vai. Abrindo o WhatsApp…');
   meShareList(); // já abre o WhatsApp com a lista atualizada para mandar no grupo
+}
+// Resposta do "vai ficar para o churrasco?" no cartão do jogador
+function meChurAnswer(stay){
+  const p = meGet(); const chur = churGameEvent();
+  if(!p || !chur) return;
+  haptic();
+  if(!churSetStay(chur, p, stay)) return;
+  renderChur(); renderMeCard();
+  toast(stay ? '🍖 Anotado: você fica para o churrasco! Abrindo o WhatsApp…' : '👍 Anotado: você não fica para o churrasco. Abrindo o WhatsApp…');
+  meShareList();
+}
+// Trocar a resposta do churrasco sem reenviar a lista automaticamente
+function meChurChange(stay){
+  const p = meGet(); const chur = churGameEvent();
+  if(!p || !chur) return;
+  haptic();
+  if(!churSetStay(chur, p, stay)) return;
+  renderChur(); renderMeCard();
+  toast(stay ? '🍖 Agora você fica para o churrasco. Mande a lista atualizada 📤' : '👍 Você saiu do churrasco. Mande a lista atualizada 📤');
 }
 // Abre o WhatsApp com a Lista de Confirmação atualizada (o jogador escolhe o grupo)
 function meShareList(){
@@ -2492,6 +2530,26 @@ function meReset(){
   p.present = false; p.declined = false;
   save(players);
   renderPresence(); clearDraw();
+}
+// Bloco "vai ficar para o churrasco?" (só aparece se houver churrasco no dia do jogo)
+function meChurBlock(p){
+  const chur = churGameEvent();
+  if(!chur) return '';
+  const ans  = churMyAnswer(p);
+  const qtd  = chur.participants.length;
+  const desc = chur.desc ? ` — ${chur.desc}` : '';
+  if(ans === null){
+    return `<div class="me-chur"><div class="q">🍖 Tem churrasco depois do jogo${desc}! Vai ficar?
+      <small>${qtd ? `${qtd} já ${qtd===1?'vai ficar':'vão ficar'}` : 'Seja o primeiro a confirmar'}</small></div>
+      <div class="me-chur-btns">
+        <button type="button" class="me-chur-yes" onclick="meChurAnswer(true)">🍖 Vou ficar</button>
+        <button type="button" class="me-chur-no" onclick="meChurAnswer(false)">Não fico</button>
+      </div></div>`;
+  }
+  return `<div class="me-chur"><div class="me-chur-st">
+    <span>${ans ? '🍖 Você fica para o churrasco' : '🍖 Você não fica para o churrasco'}</span>
+    <button type="button" onclick="meChurChange(${!ans})">${ans ? 'Não vou ficar' : 'Vou ficar'}</button>
+  </div></div>`;
 }
 function renderMeCard(){
   const box = document.getElementById('me-box');
@@ -2510,6 +2568,7 @@ function renderMeCard(){
       <div class="me-done"><div class="ico">✓</div><div>
         <div class="t1">Presença confirmada, ${p.name}!</div>
         <div class="t2">${jogo} · ${conf} de ${GAME_SLOTS} vagas</div></div></div>
+      ${meChurBlock(p)}
       <button type="button" class="me-share" onclick="meShareList()">📤 Enviar lista atualizada no grupo</button>
       <button type="button" class="me-undo" onclick="meAnswer(false)">Mudou de ideia? Marcar "Não vou"</button>
     </div>`;
@@ -4661,6 +4720,49 @@ function churFmtDate(iso){
 
 function churFind(id){ return churData.list.find(c => c.id === id); }
 
+// ─── CHURRASCO DO DIA DO JOGO (integra com a Lista de Confirmação) ───
+// Um churrasco criado com a data do próximo jogo vira o "churrasco do jogo":
+// o jogador responde no cartão se fica, e a lista do WhatsApp mostra quem fica.
+function churGameEvent(){
+  let k; try{ k = listCycleKey(); }catch(e){ return null; }
+  return (churData.list || []).find(c => c.date === k) || null;
+}
+function churNameKey(n){ return String(n||'').trim().toLowerCase(); }
+// true = fica · false = não fica · null = não respondeu
+function churMyAnswer(p, chur = churGameEvent()){
+  if(!chur || !p) return null;
+  const k = churNameKey(p.name);
+  if(chur.participants.some(x => churNameKey(x.name) === k)) return true;
+  if((chur.out || []).includes(k)) return false;
+  return null;
+}
+function churSetStay(chur, p, stay){
+  const k = churNameKey(p.name);
+  chur.out = (chur.out || []).filter(n => n !== k);
+  const part = chur.participants.find(x => churNameKey(x.name) === k);
+  if(stay){
+    if(!part){ if(!chur.partNextId) chur.partNextId = 1; chur.participants.push({ id: chur.partNextId++, name: p.name, paid: false }); }
+  } else {
+    if(part && part.paid){ toast('⚠️ Você já está como pago neste churrasco. Fale com quem organizou.'); return false; }
+    chur.participants = chur.participants.filter(x => churNameKey(x.name) !== k);
+    chur.out.push(k);
+  }
+  churSave(churData);
+  return true;
+}
+function churLocalToday(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function churSetTotal(churId){
+  const chur = churFind(churId); if(!chur) return;
+  const el = document.getElementById('chur-total-edit-'+churId);
+  const v = parseFloat(String(el.value).replace(',','.')) || 0;
+  if(v <= 0){ toast('⚠️ Informe o valor total gasto.'); return; }
+  chur.total = v; churSave(churData); renderChur();
+  toast('✅ Valor do churrasco atualizado!');
+}
+
 // Preenche o datalist com os nomes do elenco atual, para busca/autocomplete
 // ao adicionar participante — sem travar a digitação livre de nomes avulsos.
 function churPopulatePlayersDatalist(){
@@ -4678,10 +4780,9 @@ function churCreate(){
   const dateEl  = document.getElementById('chur-date');
   const descEl  = document.getElementById('chur-desc');
   const totalEl = document.getElementById('chur-total');
-  const date  = dateEl.value || new Date().toISOString().slice(0,10);
+  const date  = dateEl.value || churLocalToday();
   const desc  = descEl.value.trim();
-  const total = parseFloat(totalEl.value) || 0;
-  if(total <= 0){ toast('⚠️ Informe o valor total gasto.'); return; }
+  const total = parseFloat(totalEl.value) || 0; // pode ficar em branco: "valor a definir"
 
   const chur = { id: churData.nextId++, date, desc, total, participants: [], partNextId: 1 };
   churData.list.unshift(chur);
@@ -4690,7 +4791,9 @@ function churCreate(){
   dateEl.value = ''; descEl.value = ''; totalEl.value = '';
   _churOpenIds.add(chur.id);
   renderChur();
-  toast('✅ Churrasco criado! Agora adicione quem ficou.');
+  toast(churGameEvent() === chur
+    ? '✅ Churrasco do jogo criado! Já aparece no app e na Lista de Confirmação.'
+    : (total ? '✅ Churrasco criado! Agora adicione quem ficou.' : '✅ Churrasco criado! Informe o valor quando souber.'));
 }
 
 function churDelChurrasco(id){
@@ -4821,6 +4924,7 @@ function churDelParticipant(churId, partId){
 }
 
 function renderChur(){
+  try{ renderMeCard(); }catch(e){} // cartão do jogador mostra/esconde a pergunta do churrasco do jogo
   const el = document.getElementById('chur-list');
   if(!el) return;
   churPopulatePlayersDatalist();
@@ -4834,6 +4938,9 @@ function renderChur(){
     const rateio    = churRateio(chur);
     const paidCount = chur.participants.filter(p => p.paid).length;
     const total     = chur.participants.length;
+    const semValor  = !(chur.total > 0);
+    const isGame    = churGameEvent() === chur;
+    const outCount  = (chur.out || []).length;
 
     // Ordena por urgência (pendente → pago), depois por nome — mesmo padrão dos convidados
     const sorted = [...chur.participants].sort((a,b) => {
@@ -4848,7 +4955,7 @@ function renderChur(){
           return `<div class="fin-recv-item ${cls}" onclick="churToggleParticipant(${chur.id},${p.id})">
             <div class="fin-recv-check">${icon}</div>
             <span class="fin-recv-name">${p.name}</span>
-            <span class="fin-recv-amt">${finFmt(rateio)}</span>
+            <span class="fin-recv-amt">${semValor ? '—' : finFmt(rateio)}</span>
             <button class="fin-recv-del" onclick="event.stopPropagation();churDelParticipant(${chur.id},${p.id})" title="Excluir">🗑</button>
           </div>`;
         }).join('')
@@ -4858,16 +4965,21 @@ function renderChur(){
       <div class="chur-card-header" onclick="churToggleCard(${chur.id})">
         <div class="chur-card-title">
           <div class="chur-card-date">🍖 ${churFmtDate(chur.date)}${chur.desc ? ' — '+chur.desc : ''}</div>
-          <div class="chur-card-desc">${total} pessoa${total===1?'':'s'} · ${paidCount}/${total} pagaram</div>
+          <div class="chur-card-desc">${total} pessoa${total===1?'':'s'}${semValor ? (outCount ? ` · ${outCount} não fica${outCount===1?'':'m'}` : '') : ` · ${paidCount}/${total} pagaram`}</div>
+          ${isGame ? '<span class="chur-game-tag">⚽ NA LISTA DO JOGO</span>' : ''}
         </div>
-        <div class="chur-card-total">${finFmt(chur.total)}</div>
+        <div class="chur-card-total">${semValor ? 'a definir' : finFmt(chur.total)}</div>
         <button class="chur-card-del chur-admin-only" onclick="event.stopPropagation();churDelChurrasco(${chur.id})" title="Excluir churrasco">🗑</button>
         <div class="chur-card-arrow">▾</div>
       </div>
       <div class="chur-card-body">
         <div class="chur-card-stats">
-          <span>Rateio: <b>${finFmt(rateio)}</b> /pessoa</span>
-          <span>Total: <b>${finFmt(chur.total)}</b></span>
+          <span>Rateio: <b>${semValor ? 'a definir' : finFmt(rateio)}</b> /pessoa</span>
+          <span>Total: <b>${semValor ? 'a definir' : finFmt(chur.total)}</b></span>
+        </div>
+        <div class="chur-edit-total">
+          <input class="input-txt" id="chur-total-edit-${chur.id}" type="number" min="0" step="0.01" inputmode="decimal" placeholder="${semValor ? 'Informe o valor total gasto' : 'Alterar valor total'}" onkeydown="if(event.key==='Enter'){event.preventDefault();churSetTotal(${chur.id});}">
+          <button class="btn btn-outline btn-sm" onclick="churSetTotal(${chur.id})">💲 Salvar valor</button>
         </div>
         <div class="add-form" style="margin-bottom:8px">
           <input class="input-txt" id="chur-part-name-${chur.id}" type="text" list="chur-players-list" placeholder="Nome (busque no elenco ou digite)" maxlength="30" onkeydown="if(event.key==='Enter'){event.preventDefault();churAddParticipant(${chur.id});}">
@@ -4889,6 +5001,7 @@ function churSendCobranca(churId){
   const paidList  = chur.participants.filter(p => p.paid).map(p => p.name).sort((a,b)=>a.localeCompare(b));
   const pendList  = chur.participants.filter(p => !p.paid).map(p => p.name).sort((a,b)=>a.localeCompare(b));
 
+  if(!(chur.total > 0)){ toast('⚠️ Informe o valor total gasto antes de cobrar.'); return; }
   if(!pendList.length){
     toast('✅ Todo mundo já pagou esse churrasco!');
     return;
@@ -5069,6 +5182,14 @@ function buildConfirmationMessage(vagas, incluirPendentes = isGameDay()){
   msg += declinados.length
     ? declinados.map(name => `- ${name}`).join('\n') + '\n'
     : '-\n';
+
+  // Churrasco do dia do jogo (se houver): quem fica
+  const churJogo = churGameEvent();
+  if(churJogo){
+    const ficam = churJogo.participants.map(x => x.name).sort((a,b)=>a.localeCompare(b));
+    msg += `\n🍖 *Churrasco depois do jogo*${churJogo.desc ? ' — '+churJogo.desc : ''}\n`;
+    msg += ficam.length ? `Vão ficar (${ficam.length}): ${ficam.join(', ')}\n` : `Ninguém confirmou ainda — responda no app!\n`;
+  }
 
   // Seção só aparece se houver pendentes E o lembrete estiver ativado
   // (por padrão, só no dia do jogo — ver isGameDay/GAME_WEEKDAY)
