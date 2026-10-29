@@ -330,6 +330,9 @@ main {
 }
 
 .presence-item:active { background:var(--surface); }
+.presence-item.locked { cursor:default; }
+.presence-item.locked:active { background:inherit; }
+.presence-item.mine { box-shadow:0 0 0 1.5px var(--gold) inset; }
 .presence-item.selected {
   border-color:var(--gold);
   background:rgba(212,175,55,.07);
@@ -1761,7 +1764,7 @@ body:not(.player-mode-ro) .tab-chur-btn { display:none !important; }
 
     <div class="section-label">Presença <span class="cnt" id="presence-count">0</span><span class="cnt cnt-declined" id="declined-count" style="display:none">0</span></div>
 
-    <div class="action-row">
+    <div class="action-row" id="presence-admin-actions">
       <button class="btn btn-outline btn-sm" onclick="selectAll()">✅ Todos</button>
       <button class="btn btn-ghost btn-sm" onclick="clearSelection()">✕ Limpar</button>
     </div>
@@ -2454,7 +2457,7 @@ function meSet(id){
   try{ localStorage.setItem(ME_KEY, String(id)); }catch(e){}
   try{ sessionStorage.removeItem('ufg_me_skip'); }catch(e){}
   document.getElementById('who-overlay').style.display = 'none';
-  renderMeCard();
+  renderPresence(); // libera o próprio nome na grade (e redesenha o cartão)
   const p = meGet();
   if(p) toast(`👋 Oi, ${p.name}! Agora é só tocar em VOU JOGAR.`);
 }
@@ -2626,21 +2629,36 @@ function renderPresence(){
   // Recusados sempre por último (agrupados), alfabética dentro de cada grupo — reduz ruído visual
   const sorted=[...players].sort((a,b)=>
     a.declined===b.declined ? a.name.localeCompare(b.name) : (a.declined?1:-1));
-  el.innerHTML=sorted.map(p=>`
-    <div class="presence-item ${p.present?'selected':''} ${p.fee==='pending'?'pending':''} ${p.declined?'declined':''}" onclick="toggleP(${p.id})">
+  const acts=document.getElementById('presence-admin-actions');
+  if(acts) acts.style.display = presIsAdmin() ? '' : 'none';
+  el.innerHTML=sorted.map(p=>{ const can=presCanEdit(p); return `
+    <div class="presence-item ${p.present?'selected':''} ${p.fee==='pending'?'pending':''} ${p.declined?'declined':''} ${can?'':'locked'} ${(!presIsAdmin() && can)?'mine':''}" onclick="toggleP(${p.id})">
       <div class="presence-check">${p.present?'✓':''}</div>
       <span class="presence-name">${p.name}</span>
       <span class="presence-icons">
         ${p.isGK?'<span class="badge-gk">🥅</span>':''}
         ${p.fee==='pending'?'<span class="badge-dot"></span>':''}
-        <span class="presence-decline-btn" title="Não vai jogar" onclick="event.stopPropagation();toggleDeclined(${p.id})">✕</span>
+        ${can?`<span class="presence-decline-btn" title="Não vai jogar" onclick="event.stopPropagation();toggleDeclined(${p.id})">✕</span>`:''}
       </span>
-    </div>`).join('');
+    </div>`;}).join('');
   updateStats();
   renderMeCard();
 }
 
+// ─── PERMISSÃO NA GRADE DE PRESENÇA ──────────────────────────
+// Administrador marca/desmarca qualquer um. Jogador só mexe no próprio nome
+// (o "Quem é você?" deste celular) — não troca nem desmarca os outros.
+function presIsAdmin(){ return typeof currentRole !== 'undefined' && currentRole === 'admin'; }
+function presCanEdit(p){
+  if(presIsAdmin()) return true;
+  const me = meGet();
+  return !!(me && p && me.id === p.id);
+}
+function presLockedMsg(){
+  toast(meGet() ? '🔒 Você só pode marcar o seu nome. Os outros confirmam pelo app.' : '👋 Toque em "Quem é você?" no topo para confirmar o seu nome.');
+}
 function toggleP(id){
+  if(!presCanEdit(players.find(x=>x.id===id))){ presLockedMsg(); return; }
   haptic();
   const p=players.find(x=>x.id===id);
   if(p){p.present=!p.present; if(p.present)p.declined=false; save(players);}
@@ -2648,14 +2666,16 @@ function toggleP(id){
 }
 
 function toggleDeclined(id){
+  if(!presCanEdit(players.find(x=>x.id===id))){ presLockedMsg(); return; }
   haptic();
   const p=players.find(x=>x.id===id);
   if(p){p.declined=!p.declined; if(p.declined)p.present=false; save(players);}
   renderPresence(); clearDraw();
 }
 
-function selectAll(){haptic();players.forEach(p=>{p.present=true;p.declined=false;});save(players);renderPresence();clearDraw();}
+function selectAll(){if(!presIsAdmin()){presLockedMsg();return;}haptic();players.forEach(p=>{p.present=true;p.declined=false;});save(players);renderPresence();clearDraw();}
 function clearSelection(){
+  if(!presIsAdmin()){ presLockedMsg(); return; }
   const temDados = players.some(p=>p.present||p.declined);
   if(!temDados) return; // nada marcado, não precisa confirmar
   finConfirm(
