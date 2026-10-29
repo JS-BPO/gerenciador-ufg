@@ -2422,10 +2422,21 @@ function listCheckNewCycle(){
   }
 }
 
-function save(p){
+// overridePresence=true só para ações em massa do admin (✅ Todos / ✕ Limpar).
+// Nos demais casos, a presença de cada jogador vem SEMPRE da nuvem — assim um
+// celular com a lista desatualizada não apaga as confirmações dos outros.
+function save(p, overridePresence){
   listAutoReset(p);
   localStorage.setItem(KEY,JSON.stringify(p));
-  fbPush('players', p);
+  if(typeof fbPushPlayers === 'function') fbPushPlayers(p, !!overridePresence);
+  else if(typeof fbPush === 'function') fbPush('players', p);
+}
+// Salva a presença de UM jogador (confirmar / não vou / desmarcar) mexendo só nele na nuvem.
+function savePresence(id){
+  listAutoReset(players);
+  localStorage.setItem(KEY,JSON.stringify(players));
+  const p = players.find(x=>x.id===id);
+  if(p && typeof fbPushPresence === 'function') fbPushPresence(id, { present: !!p.present, declined: !!p.declined });
 }
 
 function initData(){
@@ -2489,7 +2500,7 @@ function meAnswer(going){
   haptic();
   p.present  = !!going;
   p.declined = !going;
-  save(players);
+  savePresence(p.id);
   renderPresence(); clearDraw();
   // Tem churrasco marcado para o dia do jogo e a pessoa ainda não respondeu?
   // Pergunta primeiro e só abre o WhatsApp depois da resposta (a lista já sai com o churrasco).
@@ -2531,7 +2542,7 @@ function meReset(){
   const p = meGet();
   if(!p) return;
   p.present = false; p.declined = false;
-  save(players);
+  savePresence(p.id);
   renderPresence(); clearDraw();
 }
 // Bloco "vai ficar para o churrasco?" (só aparece se houver churrasco no dia do jogo)
@@ -2661,7 +2672,7 @@ function toggleP(id){
   if(!presCanEdit(players.find(x=>x.id===id))){ presLockedMsg(); return; }
   haptic();
   const p=players.find(x=>x.id===id);
-  if(p){p.present=!p.present; if(p.present)p.declined=false; save(players);}
+  if(p){p.present=!p.present; if(p.present)p.declined=false; savePresence(p.id);}
   renderPresence(); clearDraw();
 }
 
@@ -2669,11 +2680,11 @@ function toggleDeclined(id){
   if(!presCanEdit(players.find(x=>x.id===id))){ presLockedMsg(); return; }
   haptic();
   const p=players.find(x=>x.id===id);
-  if(p){p.declined=!p.declined; if(p.declined)p.present=false; save(players);}
+  if(p){p.declined=!p.declined; if(p.declined)p.present=false; savePresence(p.id);}
   renderPresence(); clearDraw();
 }
 
-function selectAll(){if(!presIsAdmin()){presLockedMsg();return;}haptic();players.forEach(p=>{p.present=true;p.declined=false;});save(players);renderPresence();clearDraw();}
+function selectAll(){if(!presIsAdmin()){presLockedMsg();return;}haptic();players.forEach(p=>{p.present=true;p.declined=false;});save(players,true);renderPresence();clearDraw();}
 function clearSelection(){
   if(!presIsAdmin()){ presLockedMsg(); return; }
   const temDados = players.some(p=>p.present||p.declined);
@@ -2684,7 +2695,7 @@ function clearSelection(){
     ()=>{
       haptic();
       players.forEach(p=>{p.present=false;p.declined=false;});
-      save(players); renderPresence(); clearDraw();
+      save(players,true); renderPresence(); clearDraw();
     }
   );
 }
@@ -4767,7 +4778,10 @@ function churSetStay(chur, p, stay){
     chur.participants = chur.participants.filter(x => churNameKey(x.name) !== k);
     chur.out.push(k);
   }
-  churSave(churData);
+  localStorage.setItem(CHUR_KEY, JSON.stringify(churData));
+  // Na nuvem, mexe só na resposta desta pessoa (não apaga a dos outros)
+  if(typeof fbChurStay === 'function' && fbDB && fbAuth && fbAuth.currentUser) fbChurStay(chur.id, p.name, stay);
+  else churSave(churData);
   return true;
 }
 function churLocalToday(){
@@ -5524,6 +5538,105 @@ let _presenceInteracting = false;
 let _presenceInteractingTimer = null;
 let _pendingRemotePlayers = null;
 
+// ─── ESCRITA SEGURA DA PRESENÇA (transação) ──────────────────
+// Cada confirmação lê a lista atual da nuvem e altera só o próprio jogador,
+// então duas pessoas confirmando ao mesmo tempo — ou um celular com a lista
+// antiga — não apagam as marcações dos outros.
+const _fbPendingPresence = {}; // confirmações feitas antes da 1ª leitura da nuvem
+function fbPlayersReady(){ return !!(fbDB && fbAuth && fbAuth.currentUser && window.__ufgPlayersReady); }
+function fbApplyPlayersResult(arr, ts){
+  players = arr;
+  localStorage.setItem(KEY, JSON.stringify(players));
+  renderPresence(); renderRoster();
+  setSyncStatus('synced');
+}
+function fbPushPresence(id, fields){
+  if(!fbDB || !fbAuth || !fbAuth.currentUser) { _fbPendingPresence[id] = fields; return; }
+  if(!window.__ufgPlayersReady){ _fbPendingPresence[id] = fields; return; }
+  const ref = fbDB.collection('ufg').doc('players');
+  setSyncStatus('syncing');
+  let ts;
+  return fbDB.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    const arr = (snap.exists && Array.isArray(snap.data().data)) ? snap.data().data : JSON.parse(JSON.stringify(players));
+    listAutoReset(arr);
+    let cp = arr.find(x => x.id === id);
+    if(!cp){ const loc = players.find(x => x.id === id); if(!loc) return arr; cp = JSON.parse(JSON.stringify(loc)); arr.push(cp); }
+    cp.present  = !!fields.present;
+    cp.declined = !!fields.declined;
+    listAutoReset(arr); // carimba o ciclo do jogo na marcação nova
+    ts = Date.now(); _fbLastWriteTs.players = ts;
+    tx.set(ref, { data: arr, updatedAt: ts });
+    return arr;
+  }).then(arr => { delete _fbPendingPresence[id]; fbApplyPlayersResult(arr, ts); })
+    .catch(err => { console.warn('Firestore presença:', err.message); setSyncStatus('error'); toast('⚠️ Não salvou na nuvem. Confira a internet e toque de novo.'); });
+}
+function fbFlushPendingPresence(){
+  Object.keys(_fbPendingPresence).forEach(k => {
+    const id = isNaN(+k) ? k : +k;
+    const f = _fbPendingPresence[k];
+    const loc = players.find(x => x.id === id);
+    if(loc){ loc.present = f.present; loc.declined = f.declined; }
+    fbPushPresence(id, f);
+  });
+}
+// Salva a lista inteira (elenco, mensalidade etc.). A presença é mesclada com a
+// da nuvem, exceto nas ações em massa do admin (overridePresence).
+function fbPushPlayers(local, overridePresence){
+  if(!fbDB || !fbAuth || !fbAuth.currentUser) return;
+  if(!window.__ufgPlayersReady) return; // ainda não leu a nuvem: não sobrescreve nada
+  const ref = fbDB.collection('ufg').doc('players');
+  setSyncStatus('syncing');
+  let ts;
+  const mine = JSON.parse(JSON.stringify(local));
+  return fbDB.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    const cloud = (snap.exists && Array.isArray(snap.data().data)) ? snap.data().data : [];
+    if(!overridePresence){
+      const byId = new Map(cloud.map(x => [x.id, x]));
+      mine.forEach(p => {
+        const c = byId.get(p.id);
+        if(!c) return;
+        p.present = !!c.present; p.declined = !!c.declined;
+        if(c.markFor) p.markFor = c.markFor; else delete p.markFor;
+      });
+    }
+    listAutoReset(mine);
+    ts = Date.now(); _fbLastWriteTs.players = ts;
+    tx.set(ref, { data: mine, updatedAt: ts });
+    return mine;
+  }).then(arr => fbApplyPlayersResult(arr, ts))
+    .catch(err => { console.warn('Firestore write (players):', err.message); setSyncStatus('error'); });
+}
+
+function fbChurStay(churId, name, stay){
+  const ref = fbDB.collection('ufg').doc('churrasco');
+  const k = churNameKey(name);
+  let ts;
+  setSyncStatus('syncing');
+  return fbDB.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    const d = (snap.exists && snap.data().data) ? snap.data().data : JSON.parse(JSON.stringify(churData));
+    const chur = (d.list || []).find(c => c.id === churId);
+    if(!chur) return d;
+    chur.participants = chur.participants || [];
+    chur.out = (chur.out || []).filter(n => n !== k);
+    const part = chur.participants.find(x => churNameKey(x.name) === k);
+    if(stay){
+      if(!part){ if(!chur.partNextId) chur.partNextId = (Math.max(0, ...chur.participants.map(x=>x.id||0)) + 1); chur.participants.push({ id: chur.partNextId++, name, paid: false }); }
+    } else if(!(part && part.paid)){
+      chur.participants = chur.participants.filter(x => churNameKey(x.name) !== k);
+      chur.out.push(k);
+    }
+    ts = Date.now(); _fbLastWriteTs.churrasco = ts;
+    tx.set(ref, { data: d, updatedAt: ts });
+    return d;
+  }).then(d => {
+    churData = d; localStorage.setItem(CHUR_KEY, JSON.stringify(churData));
+    renderChur(); setSyncStatus('synced');
+  }).catch(err => { console.warn('Firestore churrasco:', err.message); setSyncStatus('error'); toast('⚠️ Não salvou na nuvem. Confira a internet e tente de novo.'); });
+}
+
 function fbPush(doc, data){
   if(!fbDB || !fbAuth.currentUser) return; // sem conexão/login na nuvem = segue só local, sem erro
   const ts = Date.now();
@@ -5568,9 +5681,13 @@ function fbStartSync(){
   fbStopSync();
 
   // Presença + Elenco — qualquer autenticado (admin ou jogador) sincroniza
+  window.__ufgPlayersReady = false;
   _fbUnsubPlayers = fbDB.collection('ufg').doc('players').onSnapshot(snap => {
-    if(!snap.exists) return;
+    if(!snap.exists){ window.__ufgPlayersReady = true; fbFlushPendingPresence(); return; }
     const d = snap.data();
+    const firstLoad = !window.__ufgPlayersReady;
+    window.__ufgPlayersReady = true;
+    if(firstLoad) setTimeout(fbFlushPendingPresence, 0);
     if(d.updatedAt === _fbLastWriteTs.players) return; // eco da própria escrita — ignora, evita o "piscar"
     if(_presenceInteracting){
       _pendingRemotePlayers = d.data; // adia até o toque em andamento terminar
