@@ -1582,6 +1582,8 @@ body { max-width:100%; overflow-x:clip; }
 .me-done .t1{font-size:16px;font-weight:900;color:#5fe88a}
 .me-out .me-done .t1{color:var(--red)}
 .me-done .t2{font-size:11px;color:var(--muted);margin-top:2px}
+.me-share{margin-top:12px;width:100%;padding:13px 10px;border:none;border-radius:10px;background:#25D366;color:#06210f;font-size:14px;font-weight:900;letter-spacing:.02em;cursor:pointer}
+.me-share:active{transform:scale(.98)}
 .me-undo{margin-top:12px;width:100%;padding:10px;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer}
 .me-ask{width:100%;padding:13px;border-radius:12px;border:1.5px dashed rgba(212,175,55,.5);background:rgba(212,175,55,.05);color:var(--gold);font-size:13px;font-weight:800;margin:4px 0 14px;cursor:pointer}
 .who-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-height:46vh;overflow-y:auto}
@@ -2474,7 +2476,15 @@ function meAnswer(going){
   p.declined = !going;
   save(players);
   renderPresence(); clearDraw();
-  toast(going ? '✅ Presença confirmada! Bora!' : '👍 Beleza, marcado que você não vai.');
+  toast(going ? '✅ Presença confirmada! Abrindo o WhatsApp…' : '👍 Marcado que você não vai. Abrindo o WhatsApp…');
+  meShareList(); // já abre o WhatsApp com a lista atualizada para mandar no grupo
+}
+// Abre o WhatsApp com a Lista de Confirmação atualizada (o jogador escolhe o grupo)
+function meShareList(){
+  const conf  = players.filter(x => x.present).length;
+  const vagas = Math.max(GAME_SLOTS, conf);
+  const msg   = buildConfirmationMessage(vagas);
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
 }
 function meReset(){
   const p = meGet();
@@ -2500,6 +2510,7 @@ function renderMeCard(){
       <div class="me-done"><div class="ico">✓</div><div>
         <div class="t1">Presença confirmada, ${p.name}!</div>
         <div class="t2">${jogo} · ${conf} de ${GAME_SLOTS} vagas</div></div></div>
+      <button type="button" class="me-share" onclick="meShareList()">📤 Enviar lista atualizada no grupo</button>
       <button type="button" class="me-undo" onclick="meAnswer(false)">Mudou de ideia? Marcar "Não vou"</button>
     </div>`;
     return;
@@ -2509,6 +2520,7 @@ function renderMeCard(){
       <div class="me-done"><div class="ico">✕</div><div>
         <div class="t1">${p.name}, você marcou que não vai</div>
         <div class="t2">${jogo} · ${conf} de ${GAME_SLOTS} vagas</div></div></div>
+      <button type="button" class="me-share" onclick="meShareList()">📤 Enviar lista atualizada no grupo</button>
       <button type="button" class="me-undo" onclick="meAnswer(true)">Mudou de ideia? Vou jogar ✅</button>
     </div>`;
     return;
