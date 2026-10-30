@@ -331,6 +331,11 @@ main {
 
 .presence-item:active { background:var(--surface); }
 .presence-item.locked { cursor:default; }
+.badge-guest { font-size:12px; line-height:1; }
+.add-opts { display:flex; flex-wrap:wrap; gap:8px 14px; margin:-4px 2px 14px; }
+.add-opts label { display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:var(--white,#F4EEDF); cursor:pointer; }
+.add-opts .add-pos { padding:7px 10px; font-size:12px; border-radius:var(--radius-sm); }
+.add-opts input { width:16px; height:16px; accent-color:var(--gold); margin:0; }
 .presence-item.locked:active { background:inherit; }
 .presence-item.mine { box-shadow:0 0 0 1.5px var(--gold) inset; }
 .presence-item.selected {
@@ -1759,6 +1764,7 @@ body:not(.player-mode-ro) .tab-chur-btn { display:none !important; }
 
     <div class="legend">
       <span>🥅 = Goleiro</span>
+      <span>🤝 = Convidado</span>
       <span id="legend-fee-pending">🔴 = Mensalidade pendente</span>
     </div>
 
@@ -1806,6 +1812,14 @@ body:not(.player-mode-ro) .tab-chur-btn { display:none !important; }
       <input class="input-txt" id="new-name" type="text" placeholder="Nome ou apelido do jogador" maxlength="25"
         onkeydown="if(event.key==='Enter')addPlayer()">
       <button class="btn btn-gold" onclick="addPlayer()">➕</button>
+    </div>
+    <div class="add-opts">
+      <select class="sel-small add-pos" id="new-pos" aria-label="Posição">
+        <option value="1">⚽ Linha</option>
+        <option value="gk">🥅 Goleiro</option>
+      </select>
+      <label><input type="checkbox" id="new-guest" checked onchange="addOptsSync()"> 🤝 Convidado</label>
+      <label id="new-confirm-wrap"><input type="checkbox" id="new-confirm" checked> ✅ Já confirmar presença</label>
     </div>
 
     <div class="section-label">Elenco <span class="cnt" id="roster-count">0</span></div>
@@ -2647,8 +2661,9 @@ function renderPresence(){
       <div class="presence-check">${p.present?'✓':''}</div>
       <span class="presence-name">${p.name}</span>
       <span class="presence-icons">
+        ${p.isGuest?'<span class="badge-guest" title="Convidado">🤝</span>':''}
         ${p.isGK?'<span class="badge-gk">🥅</span>':''}
-        ${p.fee==='pending'?'<span class="badge-dot"></span>':''}
+        ${p.fee==='pending'&&!p.isGuest?'<span class="badge-dot"></span>':''}
         ${can?`<span class="presence-decline-btn" title="Não vai jogar" onclick="event.stopPropagation();toggleDeclined(${p.id})">✕</span>`:''}
       </span>
     </div>`;}).join('');
@@ -2662,11 +2677,12 @@ function renderPresence(){
 function presIsAdmin(){ return typeof currentRole !== 'undefined' && currentRole === 'admin'; }
 function presCanEdit(p){
   if(presIsAdmin()) return true;
+  if(p && p.isGuest) return true; // convidado: qualquer jogador pode marcar (quem trouxe confirma)
   const me = meGet();
   return !!(me && p && me.id === p.id);
 }
 function presLockedMsg(){
-  toast(meGet() ? '🔒 Você só pode marcar o seu nome. Os outros confirmam pelo app.' : '👋 Toque em "Quem é você?" no topo para confirmar o seu nome.');
+  toast(meGet() ? '🔒 Você só marca o seu nome e os convidados 🤝. Os outros confirmam pelo app.' : '👋 Toque em "Quem é você?" no topo para confirmar o seu nome.');
 }
 function toggleP(id){
   if(!presCanEdit(players.find(x=>x.id===id))){ presLockedMsg(); return; }
@@ -5196,10 +5212,10 @@ function buildConfirmationMessage(vagas, incluirPendentes = isGameDay()){
   const outros = [...gks.slice(2), ...rest].sort((a,b)=>a.name.localeCompare(b.name));     // demais confirmados (inclui goleiro extra, se houver), ordenados alfabeticamente
 
   // Quem marcou "não vai jogar" na tela de presença
-  const declinados = players.filter(p=>p.declined).map(p=>p.name).sort((a,b)=>a.localeCompare(b));
+  const declinados = players.filter(p=>p.declined).map(p=>p.name+(p.isGuest?' 🤝':'')).sort((a,b)=>a.localeCompare(b));
 
   // Quem ainda não respondeu (nem confirmou presença, nem recusou)
-  const pendentes = players.filter(p=>!p.present && !p.declined).map(p=>p.name).sort((a,b)=>a.localeCompare(b));
+  const pendentes = players.filter(p=>!p.present && !p.declined && !p.isGuest).map(p=>p.name).sort((a,b)=>a.localeCompare(b));
 
   const gameDateLabel = fmtGameDate(getNextGameDate());
 
@@ -5209,7 +5225,7 @@ function buildConfirmationMessage(vagas, incluirPendentes = isGameDay()){
   for(let i=1;i<=vagas;i++){
     // Vagas 1-2: só preenche se houver goleiro confirmado; nunca usa jogador de linha
     const p = i<=2 ? gksReservados[i-1] : outros[i-3];
-    msg += `${i<=2?'🥅 ':''}${String(i).padStart(2,'0')} - ${p?p.name:''}\n`;
+    msg += `${i<=2?'🥅 ':''}${String(i).padStart(2,'0')} - ${p?p.name+(p.isGuest?' 🤝':''):''}\n`;
   }
 
   msg += `\n❌ *Não vai*\n`;
@@ -5421,10 +5437,26 @@ function addPlayer(){
   if(!name){toast('⚠️ Digite um nome.');return;}
   if(players.some(p=>p.name.toLowerCase()===name.toLowerCase())){toast('⚠️ Já cadastrado.');return;}
   const now = new Date();
-  players.push({id:Date.now(),name,stars:1,isGK:false,isGuest:false,fee:'ok',present:false,declined:false,customFee:null,joinedY:now.getFullYear(),joinedM:now.getMonth()});
-  save(players);inp.value='';renderRoster();
+  const g  = document.getElementById('new-guest');
+  const pos = document.getElementById('new-pos');
+  const cf = document.getElementById('new-confirm');
+  const isGuest = !!(g && g.checked);
+  const lvl     = pos ? pos.value : '1';
+  const isGK    = lvl === 'gk';
+  const stars   = isGK ? 1 : (parseInt(lvl) || 1);
+  const confirm = isGuest && !!(cf && cf.checked);
+  players.push({id:Date.now(),name,stars,isGK,isGuest,fee:'ok',present:confirm,declined:false,customFee:null,joinedY:now.getFullYear(),joinedM:now.getMonth()});
+  save(players);inp.value='';renderRoster();renderPresence();clearDraw();
+  if(pos) pos.value = '1';
   finAfterRosterChange(); // cria a pessoa vinculada no Financeiro
-  toast('✅ '+name+' adicionado!');
+  toast(isGuest
+    ? `✅ ${name} adicionado como convidado 🤝${confirm ? ' e já está na lista!' : '.'}`
+    : '✅ '+name+' adicionado!');
+}
+// "Já confirmar presença" só vale para convidado
+function addOptsSync(){
+  const g = document.getElementById('new-guest'), w = document.getElementById('new-confirm-wrap');
+  if(w) w.style.display = (g && g.checked) ? '' : 'none';
 }
 
 // ─── TOAST ───────────────────────────────────────────────────
@@ -6076,6 +6108,13 @@ function showApp(){
   const churBox = document.getElementById('chur-content');
   document.getElementById(currentRole === 'admin' ? 'fin-sub-chur' : 'tab-chur').appendChild(churBox);
   renderChur();
+  // Elenco: jogador normalmente adiciona convidado; admin cadastra do elenco fixo
+  const ng = document.getElementById('new-guest');
+  if(ng){ ng.checked = currentRole !== 'admin'; addOptsSync(); }
+  const np = document.getElementById('new-pos');
+  if(np) np.innerHTML = currentRole === 'admin'
+    ? '<option value="1">⭐ Regular</option><option value="2">⭐⭐ Bom</option><option value="3">⭐⭐⭐ Craque</option><option value="gk">🥅 Goleiro</option>'
+    : '<option value="1">⚽ Linha</option><option value="gk">🥅 Goleiro</option>';
   // Force re-render to apply restrictions
   renderPresence();
   renderRoster();
