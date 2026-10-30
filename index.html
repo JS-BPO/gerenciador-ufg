@@ -1814,8 +1814,10 @@ body:not(.player-mode-ro) .tab-chur-btn { display:none !important; }
       <button class="btn btn-gold" onclick="addPlayer()">➕</button>
     </div>
     <div class="add-opts">
-      <select class="sel-small add-pos" id="new-pos" aria-label="Posição">
-        <option value="1">⚽ Linha</option>
+      <select class="sel-small add-pos" id="new-pos" aria-label="Nível / Posição">
+        <option value="1">⭐ Regular</option>
+        <option value="2">⭐⭐ Bom</option>
+        <option value="3">⭐⭐⭐ Craque</option>
         <option value="gk">🥅 Goleiro</option>
       </select>
       <label><input type="checkbox" id="new-guest" checked onchange="addOptsSync()"> 🤝 Convidado</label>
@@ -2155,7 +2157,7 @@ body:not(.player-mode-ro) .tab-chur-btn { display:none !important; }
           onkeydown="if(event.key==='Enter')saveEditPlayer()">
       </div>
       <div class="fin-modal-field">
-        <label>Nível / Posição</label>
+        <label id="ep-level-label">Nível / Posição</label>
         <select class="sel-small" id="ep-level" style="width:100%;padding:9px 12px;font-size:13px;border-radius:var(--radius-sm)" onchange="epLevelChange(this.value)">
           <option value="gk">🥅 Goleiro</option>
           <option value="3">⭐⭐⭐ Craque</option>
@@ -2164,7 +2166,7 @@ body:not(.player-mode-ro) .tab-chur-btn { display:none !important; }
         </select>
       </div>
       <!-- Convidado é independente da posição: dá para ser convidado E goleiro -->
-      <label class="chk-label" style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--white);cursor:pointer">
+      <label class="chk-label" id="ep-guest-wrap" style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--white);cursor:pointer">
         <input type="checkbox" id="ep-guest" style="width:16px;height:16px;accent-color:var(--gold)">
         🤝 Convidado <span style="color:var(--muted);font-weight:400">— não faz parte do elenco fixo</span>
       </label>
@@ -5344,9 +5346,15 @@ function openEditPlayer(id){
   if(!p) return;
   _editPlayerId = id;
 
+  // Jogador não transforma alguém do elenco fixo em convidado (mexeria na mensalidade).
+  const admin = typeof currentRole !== 'undefined' && currentRole === 'admin';
+  const sel = document.getElementById('ep-level');
   document.getElementById('ep-name').value  = p.name;
-  document.getElementById('ep-level').value = playerLevelVal(p);
-  document.getElementById('ep-guest').checked = !!p.isGuest;
+  sel.value = playerLevelVal(p);
+  const gChk = document.getElementById('ep-guest');
+  gChk.checked  = !!p.isGuest;
+  gChk.disabled = !admin && !p.isGuest;
+  document.getElementById('ep-guest-wrap').style.display = (!admin && !p.isGuest) ? 'none' : 'flex';
   document.getElementById('ep-modal-overlay').style.display = 'flex';
   setTimeout(() => document.getElementById('ep-name').focus(), 100);
 }
@@ -5383,8 +5391,14 @@ function saveEditPlayer(){
   const wasGuest = p.isGuest;
   p.name      = name;
   p.isGuest   = document.getElementById('ep-guest').checked;
-  p.isGK      = lvl === 'gk';
-  p.stars     = lvl === 'gk' ? 1 : (parseInt(lvl) || 1);
+  const admin = typeof currentRole !== 'undefined' && currentRole === 'admin';
+  if(!admin && !wasGuest) p.isGuest = false; // jogador não vira alguém do elenco em convidado
+  if(lvl === 'linha'){            // jogador escolheu "Linha": mantém o nível que o admin definiu
+    if(p.isGK){ p.isGK = false; p.stars = 1; }
+  } else {
+    p.isGK  = lvl === 'gk';
+    p.stars = lvl === 'gk' ? 1 : (parseInt(lvl) || 1);
+  }
   save(players);
 
   // ── Sincronizar Financeiro (somente Administrador) ──────────
@@ -6110,11 +6124,7 @@ function showApp(){
   renderChur();
   // Elenco: jogador normalmente adiciona convidado; admin cadastra do elenco fixo
   const ng = document.getElementById('new-guest');
-  if(ng){ ng.checked = currentRole !== 'admin'; addOptsSync(); }
-  const np = document.getElementById('new-pos');
-  if(np) np.innerHTML = currentRole === 'admin'
-    ? '<option value="1">⭐ Regular</option><option value="2">⭐⭐ Bom</option><option value="3">⭐⭐⭐ Craque</option><option value="gk">🥅 Goleiro</option>'
-    : '<option value="1">⚽ Linha</option><option value="gk">🥅 Goleiro</option>';
+  if(ng){ ng.checked = true; addOptsSync(); } // mesmo cadastro para admin e jogador
   // Force re-render to apply restrictions
   renderPresence();
   renderRoster();
