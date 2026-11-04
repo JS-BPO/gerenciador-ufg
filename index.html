@@ -4585,28 +4585,31 @@ function finSendCobranca(){
     return;
   }
 
+  // Lista numerada com ✅ para o pessoal copiar, marcar e devolver com o comprovante
+  const mesNome = String(MONTHS[finMonth]).toLowerCase();
+  const pixNome = (typeof FEE_PIX_LABEL !== 'undefined' ? FEE_PIX_LABEL : '').replace(/^PIX Mensalidade/i, 'Pix').trim() || 'Pix';
+  const owed    = new Map(pendList.map(p => [p.name, p.months]));
+  const todos   = mensal.map(personName).sort((a,b) => a.localeCompare(b));
+  const pad     = n => String(n).padStart(2, '0');
+  let jogo = '';
+  try{ jogo = `${String(WEEKDAYS[GAME_WEEKDAY]).toLowerCase()} (${fmtGameDate(getNextGameDate())})`; }catch(e){ jogo = 'sexta'; }
+
   let msg = '';
   msg += `${WA_BRAND_HEADER}\n`;
-  msg += `Passando aqui pra lembrar da mensalidade de *${mLabel}* (*${finFmt(dfv)}*) — é ela que garante nosso jogo toda sexta! 🙌\n\n`;
-
-  msg += `✅ *Já pagaram (${paidList.length}):* `;
-  msg += paidList.length ? paidList.join(', ') : '_Ninguém ainda_';
-  msg += `\n\n`;
-
-  msg += `🔴 *Ainda faltam (${pendList.length}):*\n`;
-  msg += pendList.length
-    ? pendList.map(p => `• ${p.name}${p.months > 1 ? ` ⚠️${p.months}m` : ''}`).join('\n')
-    : '_Ninguém_';
+  msg += `💰 *Mensalidade de ${mesNome} (${finFmt(dfv)})*\n`;
+  if(typeof FEE_PIX_KEY !== 'undefined' && FEE_PIX_KEY) msg += `📲 *${pixNome}:* ${FEE_PIX_KEY}\n`;
+  msg += `\n⏰ Bora agilizar, pessoal! Precisamos fechar as mensalidades até *${jogo}* para pagar a quadra.\n\n`;
+  msg += `👉 Pagou? Copia a lista, coloca ✅ do lado do seu nome e manda aqui com o comprovante.\n\n`;
+  msg += todos.map((n, i) => {
+    const m = owed.get(n);
+    return `${pad(i + 1)} - ${n}${m === undefined ? ' ✅' : (m > 1 ? ` (${m} meses em aberto)` : '')}`;
+  }).join('\n');
 
   if(recvPend.length){
     const label = recvOverdue ? 'vencidos' : 'pendentes';
-    const icon  = recvOverdue ? '⚠️' : '🤝';
-    msg += `\n\n${icon} *Avulsos ${label} (${recvPend.length}):*\n`;
+    msg += `\n\n⚠️ *Avulsos ${label} (${recvPend.length}):*\n`;
     msg += recvPend.map(r => `• ${finRecvLabel(r)} — ${finFmt(r.val)} _(${finRecvCat(r)})_`).join('\n');
   }
-
-  msg += `\n\n`;
-  msg += `Contamos com vocês! Bora deixar em dia pra seguirmos jogando tranquilos! 🥅💰`;
 
   document.getElementById('cobranca-modal-title-txt').textContent = '📤 Cobrança de Mensalidade';
   _cobrancaModalMsg = msg; // guarda o texto original, útil se no futuro quisermos um botão "restaurar"
