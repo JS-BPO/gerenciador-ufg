@@ -1653,6 +1653,18 @@ body { max-width:100%; overflow-x:clip; }
 .chur-game-tag{display:inline-block;margin-top:3px;font-size:9px;font-weight:800;letter-spacing:.05em;color:#000;background:var(--gold);border-radius:999px;padding:2px 8px}
 .chur-edit-total{display:flex;gap:6px;align-items:center;margin-bottom:8px}
 .chur-edit-total .input-txt{flex:1;min-width:0}
+.player-mode-ro .admin-only{display:none!important}
+.game-cancel-btn{margin-bottom:8px;color:#F2A3A3!important;border-color:rgba(224,82,82,.45)!important}
+.game-cancel-btn.on{color:#5FE08A!important;border-color:rgba(61,190,107,.45)!important}
+.fin-modal-row.gc-row{display:block}.gc-row label{display:block;margin-bottom:6px}.gc-row .input-txt{width:100%}
+.me-off{display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-size:13px;line-height:1.45;color:var(--muted)}.me-off .ic{color:var(--gold);margin-top:1px}
+.gc-confirm{background:var(--red,#E05252);color:#fff;border:none}
+.cancel-banner{display:flex;gap:12px;align-items:center;margin:0 0 12px;padding:14px;border-radius:14px;background:rgba(224,82,82,.12);border:1px solid rgba(224,82,82,.55)}
+.cancel-banner .ci{width:38px;height:38px;border-radius:50%;background:var(--red,#E05252);color:#fff;display:flex;align-items:center;justify-content:center;flex:none}
+.cancel-banner .ci .ic{width:20px;height:20px;stroke-width:2.6}
+.cancel-banner b{display:block;font-size:15px;color:var(--white,#F4EEDF)}
+.cancel-banner span{font-size:12px;color:#F2C4C4;line-height:1.4}
+.wa-preview{white-space:pre-wrap;font-size:12px;line-height:1.5;background:#0B141A;color:#E9EDEF;border-radius:10px;padding:10px 12px;max-height:220px;overflow:auto}
 .fee-modal{text-align:center;max-width:360px}
 .fee-modal-ico{width:52px;height:52px;margin:4px auto 10px;border-radius:50%;background:var(--red,#E05252);color:#fff;font-size:28px;font-weight:900;display:flex;align-items:center;justify-content:center}
 .fee-modal-t{font-size:18px;font-weight:900;color:var(--white,#F4EEDF);margin-bottom:8px}
@@ -1824,6 +1836,7 @@ body { max-width:100%; overflow-x:clip; }
   <!-- PARTIDAS (DIA DE JOGO) -->
   <div id="tab-game" class="tab-panel active">
 
+    <div id="cancel-banner"></div>
     <div id="me-box"></div>
 
     <div class="legend">
@@ -1840,6 +1853,7 @@ body { max-width:100%; overflow-x:clip; }
     <div class="presence-grid" id="presence-list"></div>
 
     <div id="confirm-list-area" style="margin-top:10px;">
+      <button class="btn btn-full btn-ghost admin-only game-cancel-btn" id="game-cancel-btn" onclick="gameCancelOpen()"></button>
       <button class="btn btn-full wa-btn" onclick="sendConfirmationList()"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/></svg> Enviar lista de confirmação no WhatsApp</button>
     </div>
 
@@ -2459,6 +2473,29 @@ body { max-width:100%; overflow-x:clip; }
   </div>
 </div>
 
+<div id="gc-overlay" class="fin-modal-overlay" style="display:none" onclick="if(event.target===this)gameCancelClose()">
+  <div class="fin-modal" onclick="event.stopPropagation()">
+    <div class="fin-modal-title"><span id="gc-title">Cancelar jogo</span><button class="fin-modal-close" onclick="gameCancelClose()">✕</button></div>
+    <div class="fin-modal-row gc-row"><label>Motivo</label>
+      <select class="input-txt" id="gc-reason" onchange="gameCancelPreview()">
+        <option value="time">Não fechou time</option>
+        <option value="chuva">Chuva</option>
+        <option value="quadra">Quadra indisponível</option>
+        <option value="feriado">Feriado</option>
+        <option value="outro">Outro motivo</option>
+      </select>
+    </div>
+    <div class="fin-modal-row gc-row" id="gc-text-wrap" style="display:none"><label>Escreva o motivo</label>
+      <input class="input-txt" id="gc-text" type="text" maxlength="120" placeholder="Ex: Evento no clube" oninput="gameCancelPreview()">
+    </div>
+    <div class="fin-modal-row gc-row"><label>Mensagem para o grupo</label><div class="wa-preview" id="gc-preview"></div></div>
+    <div class="fin-modal-actions">
+      <button class="btn btn-ghost" onclick="gameCancelClose()">Voltar</button>
+      <button class="btn gc-confirm" onclick="gameCancelConfirm()">Cancelar e avisar o grupo</button>
+    </div>
+  </div>
+</div>
+
 <div id="fee-overlay" class="fin-modal-overlay" style="display:none" onclick="if(event.target===this)feeAlertClose()">
   <div class="fin-modal fee-modal" onclick="event.stopPropagation()">
     <div class="fee-modal-ico"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5M12 16.2v.3"/></svg></div>
@@ -2621,6 +2658,7 @@ function meMaybeAsk(){
 function meAnswer(going){
   const p = meGet();
   if(!p) return;
+  if(gameIsCancelled()){ toast('⚠️ O jogo desta semana foi cancelado.'); renderMeCard(); return; }
   haptic();
   p.present  = !!going;
   p.declined = !going;
@@ -2669,6 +2707,81 @@ function meReset(){
   savePresence(p.id);
   renderPresence(); clearDraw();
 }
+// ─── JOGO DA SEMANA CANCELADO ────────────────────────────────
+// O admin marca o jogo da semana como cancelado (ex.: não fechou time).
+// Fica gravado junto do horário do jogo (doc "gameTime") e vale só para a
+// data do próximo jogo: virou a semana, o aviso some sozinho.
+const GAME_CANCEL_KEY = 'ufg_game_cancel_v1';
+let gameCancel = (() => { try{ return JSON.parse(localStorage.getItem(GAME_CANCEL_KEY) || 'null'); }catch(e){ return null; } })();
+const GC_REASONS = {
+  time:    n => `Essa semana não fechou time (só ${n} confirmado${n===1?'':'s'} de ${GAME_SLOTS} vagas), então não vai ter jogo.`,
+  chuva:   () => 'Por causa da chuva, não vai ter jogo essa semana.',
+  quadra:  () => 'A quadra não vai estar disponível, então não vai ter jogo essa semana.',
+  feriado: () => 'Por causa do feriado, não vai ter jogo essa semana.',
+};
+function gameIsCancelled(){
+  try{ return !!(gameCancel && gameCancel.key === listCycleKey()); }catch(e){ return false; }
+}
+function gameDayLabel(){
+  try{ return `${String(WEEKDAYS[GAME_WEEKDAY]).toLowerCase()} (${fmtGameDate(getNextGameDate())})`; }catch(e){ return 'sexta'; }
+}
+function gameCancelReasonText(c){
+  if(!c) return '';
+  if(c.reason === 'outro') return c.text || '';
+  const f = GC_REASONS[c.reason]; return f ? f(c.conf ?? players.filter(p => p.present).length) : '';
+}
+function gameCancelMsg(c){
+  return `${WA_BRAND_HEADER}\n❌ *Jogo de ${gameDayLabel()} cancelado*\n\n${gameCancelReasonText(c)}\n\n📅 Semana que vem tem de novo! A lista de confirmação abre normalmente no app 👊\n${APP_URL}`;
+}
+function gameCancelPush(){
+  try{ localStorage.setItem(GAME_CANCEL_KEY, JSON.stringify(gameCancel)); }catch(e){}
+  if(typeof fbDB === 'undefined' || !fbDB || !fbAuth || !fbAuth.currentUser) return;
+  const ts = Date.now(); _fbLastWriteTs.gameTime = ts;
+  fbDB.collection('ufg').doc('gameTime').set({ cancel: gameCancel || null, updatedAt: ts }, { merge: true })
+    .then(() => setSyncStatus('synced'))
+    .catch(err => { console.warn('Firestore write (cancel):', err.message); setSyncStatus('error'); });
+}
+function gameCancelOpen(){
+  if(gameIsCancelled()){ // reativar
+    finConfirm('Reativar o jogo?', `O jogo de ${gameDayLabel()} volta a valer e o pessoal pode confirmar presença de novo.`, () => {
+      gameCancel = null; gameCancelPush(); renderPresence(); toast('✅ Jogo reativado!');
+    }, null, 'Reativar jogo');
+    return;
+  }
+  document.getElementById('gc-title').textContent = `Cancelar jogo de ${gameDayLabel()}`;
+  document.getElementById('gc-reason').value = 'time';
+  document.getElementById('gc-text').value = '';
+  gameCancelPreview();
+  document.getElementById('gc-overlay').style.display = 'flex';
+}
+function gameCancelClose(){ document.getElementById('gc-overlay').style.display = 'none'; }
+function gameCancelDraft(){
+  const reason = document.getElementById('gc-reason').value;
+  return { key: listCycleKey(), reason, text: document.getElementById('gc-text').value.trim(),
+           conf: players.filter(p => p.present).length, at: Date.now() };
+}
+function gameCancelPreview(){
+  const d = gameCancelDraft();
+  document.getElementById('gc-text-wrap').style.display = d.reason === 'outro' ? '' : 'none';
+  document.getElementById('gc-preview').textContent = gameCancelMsg(d);
+}
+function gameCancelConfirm(){
+  const d = gameCancelDraft();
+  if(d.reason === 'outro' && !d.text){ toast('⚠️ Escreva o motivo do cancelamento.'); return; }
+  gameCancel = d; gameCancelPush();
+  gameCancelClose(); renderPresence(); clearDraw();
+  window.open('https://wa.me/?text=' + encodeURIComponent(gameCancelMsg(d)), '_blank');
+  toast('✅ Jogo cancelado. Abrindo o WhatsApp…');
+}
+function renderCancelBanner(){
+  const el = document.getElementById('cancel-banner'); const btn = document.getElementById('game-cancel-btn');
+  const on = gameIsCancelled();
+  if(btn){ btn.innerHTML = on ? `${ic('refresh')} Reativar jogo desta semana` : `${ic('x')} Cancelar jogo desta semana`; btn.classList.toggle('on', on); }
+  if(!el) return;
+  el.innerHTML = on ? `<div class="cancel-banner"><div class="ci">${ic('x')}</div><div>
+      <b>Jogo de ${gameDayLabel()} cancelado</b><span>${finEsc(gameCancelReasonText(gameCancel))}</span></div></div>` : '';
+}
+
 // ─── AVISO DE MENSALIDADE EM ABERTO ─────────────────────────
 // Usa o mesmo status da bolinha vermelha (p.fee, atualizado pelo admin).
 // Aparece ao abrir o app (uma vez por abertura) e fica fixo no cartão até virar "pago".
@@ -2747,6 +2860,11 @@ function renderMeCard(){
     return;
   }
   setTimeout(() => feeAlertOpen(false), 400);
+  if(gameIsCancelled()){
+    box.innerHTML = `<div class="me-card">${feeStrip(p)}<div class="me-hi">Olá, <b>${p.name}</b></div>
+      <div class="me-off">${ic('cal')} Sem jogo essa semana. A lista abre de novo para o próximo jogo.</div></div>`;
+    return;
+  }
   const conf   = players.filter(x => x.present).length;
   const restam = Math.max(0, GAME_SLOTS - conf);
   const pct    = Math.min(100, Math.round(conf / GAME_SLOTS * 100));
@@ -2817,6 +2935,7 @@ function renderPresence(){
   // Recusados sempre por último (agrupados), alfabética dentro de cada grupo — reduz ruído visual
   const sorted=[...players].sort((a,b)=>
     a.declined===b.declined ? a.name.localeCompare(b.name) : (a.declined?1:-1));
+  try{ renderCancelBanner(); }catch(e){}
   const acts=document.getElementById('presence-admin-actions');
   if(acts) acts.style.display = presIsAdmin() ? '' : 'none';
   el.innerHTML=sorted.map(p=>{ const can=presCanEdit(p); const owes=p.fee==='pending'&&!p.isGuest;
@@ -5414,6 +5533,7 @@ let _vagasModalConfirmados = 0;
 
 function sendConfirmationList(){
   haptic();
+  if(gameIsCancelled()){ toast('⚠️ O jogo desta semana está cancelado. Reative para enviar a lista.'); return; }
   const confirmados = players.filter(p=>p.present);
 
   // Sugestão: número padrão do jogo é 14 vagas — sempre pré-preenche 14, e só
@@ -6058,7 +6178,8 @@ function fbPush(doc, data){
   const ts = Date.now();
   _fbLastWriteTs[doc] = ts;
   setSyncStatus('syncing');
-  return fbDB.collection('ufg').doc(doc).set({ data, updatedAt: ts })
+  // gameTime usa merge para não apagar o aviso de jogo cancelado guardado no mesmo doc
+  return fbDB.collection('ufg').doc(doc).set({ data, updatedAt: ts }, doc === 'gameTime' ? { merge: true } : {})
     .then(() => setSyncStatus('synced'))
     .catch(err => { console.warn('Firestore write ('+doc+'):', err.message); setSyncStatus('error'); });
 }
@@ -6122,7 +6243,10 @@ function fbStartSync(){
     if(!snap.exists) return;
     const d = snap.data();
     if(d.updatedAt === _fbLastWriteTs.gameTime) return;
-    gameTime = d.data;
+    gameCancel = d.cancel || null;
+    try{ localStorage.setItem(GAME_CANCEL_KEY, JSON.stringify(gameCancel)); }catch(e){}
+    try{ renderPresence(); }catch(e){}
+    if(typeof d.data === 'string' && d.data) gameTime = d.data;
     localStorage.setItem(GAME_TIME_KEY, gameTime);
     const timeInp = document.getElementById('vagas-modal-time');
     if(timeInp) timeInp.value = gameTime;
