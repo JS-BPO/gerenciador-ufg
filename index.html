@@ -2106,7 +2106,7 @@ body { max-width:100%; overflow-x:clip; }
       <!-- ── CONTAS A RECEBER (convidados e avulsos) ── -->
       <div class="ent-in"><div class="section-label">📥 Entradas</div>
       <div class="fin-hint">
-        Convidados, rateio da bola, patrocínio etc. Toque no item para marcar como recebido.
+        Convidados, patrocínio etc. Toque no item para marcar como recebido. Valor para várias pessoas (rateio da bola, uniforme) vira uma <b>cobrança extra</b>, acompanhada em Mensalidades.
       </div>
 
       <div class="add-form fin-exp-form" style="display:none">
@@ -2121,7 +2121,7 @@ body { max-width:100%; overflow-x:clip; }
           <button class="btn btn-gold" onclick="finAddRecv()">➕</button>
         </div>
       </div>
-      <button type="button" class="btn btn-outline btn-sm" style="width:100%;margin-bottom:8px" onclick="recvMultiOpen()">👥 Lançar para várias pessoas (ex: rateio da bola)</button>
+      <button type="button" class="btn btn-outline btn-sm" style="width:100%;margin-bottom:8px" onclick="chargeNewOpen()">👥 Cobrar várias pessoas (ex: rateio da bola)</button>
 
       <div id="fin-recv-list"></div>
       </div>
@@ -2417,7 +2417,7 @@ body { max-width:100%; overflow-x:clip; }
       <label class="chk-label" id="recv-multi-paid-wrap" style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--white)">
         <input type="checkbox" id="recv-multi-paid" checked> ✅ Já recebido
       </label>
-      <div class="fin-hint" id="recv-multi-charge-hint" style="display:none;margin:0">Os marcados recebem o aviso no app com o Pix. Já vêm marcados os mensalistas.</div>
+      <div class="fin-hint" id="recv-multi-charge-hint" style="display:none;margin:0">Os marcados recebem o aviso no app com o Pix. Já vêm marcados os mensalistas. Se o pessoal já pagou, marque <b>Já recebido</b> (não gera aviso).</div>
       <input class="input-txt" id="recv-multi-search" type="text" placeholder="🔎 Buscar..." oninput="recvMultiFilter()">
       <button type="button" class="btn btn-outline btn-sm" style="width:100%" onclick="recvMultiToggleAll()">✅ Marcar / Desmarcar Todos</button>
       <div id="recv-multi-list" class="chur-multi-list"></div>
@@ -3785,20 +3785,22 @@ function chargeRows(cid){
     .sort((a,b) => a.name.localeCompare(b.name));
 }
 function chargeNewOpen(){ recvMultiOpen(true); }
-function chargeCreate(title, val, ids){
+function chargeCreate(title, val, ids, cat, paid){
+  cat = cat || 'Rateio / Extra'; paid = !!paid;
   if(!title){ toast('⚠️ Diga o que é a cobrança (ex: Bola nova).'); return; }
   if(finCharges().some(c => !c.closed && c.title.toLowerCase() === title.toLowerCase())){ toast('⚠️ Já existe uma cobrança aberta com esse nome.'); return; }
   if(!Array.isArray(finData.charges)) finData.charges = [];
   const cid = Math.max(0, ...finData.charges.map(c => c.id || 0)) + 1;
   const now = new Date();
   const md = finMonthDataOf(finData, now.getFullYear(), now.getMonth());
-  finData.charges.push({ id: cid, title, val, createdAt: finTodayISO(), key: finKey(now.getFullYear(), now.getMonth()) });
+  finData.charges.push({ id: cid, title, val, cat, createdAt: finTodayISO(), key: finKey(now.getFullYear(), now.getMonth()), ...(paid ? { closed: finTodayISO() } : {}) });
   let n = 0;
   ids.forEach(id => { const pp = personById(id); if(!pp) return;
-    md.recvs.push({ id: md.recvNextId++, name: personName(pp), val, paid:false, paidAt:null, due:null,
-                    personId: pp.id, cat:'Rateio / Extra', note: title, chargeId: cid }); n++; });
+    md.recvs.push({ id: md.recvNextId++, name: personName(pp), val, paid, paidAt: paid ? finTodayISO() : null, due:null,
+                    personId: pp.id, cat, note: title, chargeId: cid }); n++; });
   finSave(finData); recvMultiClose(); renderFin();
-  toast(`✅ Cobrança "${title}" criada para ${n} pessoa${n===1?'':'s'}`);
+  toast(paid ? `✅ "${title}" lançado como recebido de ${n} pessoa${n===1?'':'s'}` : `✅ Cobrança "${title}" criada para ${n} pessoa${n===1?'':'s'}`);
+  if(!paid && finCurrentSub !== 'fees'){ finSubTab('fees'); setTimeout(() => { const e = document.getElementById('fin-charges-label'); if(e) e.scrollIntoView({ behavior:'smooth' }); }, 150); }
 }
 function chargeTogglePaid(cid, k, rid){
   const md = finData.months[k]; const r = md && (md.recvs || []).find(x => x.id === rid && x.chargeId === cid);
@@ -6651,15 +6653,14 @@ let _recvMultiCharge = false;
 function recvMultiOpen(asCharge){
   _recvMultiCharge = !!asCharge;
   document.getElementById('recv-multi-title').textContent = asCharge ? '⚽ Nova cobrança extra' : '👥 Lançar para Várias Pessoas';
-  document.getElementById('recv-multi-cat').style.display = asCharge ? 'none' : '';
-  document.getElementById('recv-multi-paid-wrap').style.display = asCharge ? 'none' : 'flex';
+
   document.getElementById('recv-multi-charge-hint').style.display = asCharge ? '' : 'none';
   document.getElementById('recv-multi-ok').textContent = asCharge ? '➕ Criar cobrança' : '➕ Lançar';
   finPopulateCatSelect('recv-multi-cat', 'Rateio / Extra', RECV_CATEGORIES);
   document.getElementById('recv-multi-val').value = '';
   document.getElementById('recv-multi-note').value = '';
   document.getElementById('recv-multi-search').value = '';
-  document.getElementById('recv-multi-paid').checked = !asCharge;
+  document.getElementById('recv-multi-paid').checked = false;
   document.getElementById('recv-multi-note').placeholder = asCharge ? 'O que é? (ex: Bola nova)' : 'Detalhe (ex: Bola nova)';
   const nowD = new Date();
   const mens = new Set(asCharge ? finMensalistas(nowD.getFullYear(), nowD.getMonth()).map(pp => pp.id) : []);
@@ -6696,7 +6697,7 @@ function recvMultiConfirm(){
   const ids  = [...document.querySelectorAll('#recv-multi-list input:checked')].map(b => Number(b.value));
   if(val <= 0){ toast('⚠️ Informe o valor por pessoa.'); return; }
   if(!ids.length){ toast('⚠️ Marque ao menos uma pessoa.'); return; }
-  if(_recvMultiCharge){ chargeCreate(note, val, ids); return; }
+  if(_recvMultiCharge){ chargeCreate(note, val, ids, cat, paid); return; }
   const md = finMonthData();
   let added = 0, skipped = 0;
   ids.forEach(id => {
