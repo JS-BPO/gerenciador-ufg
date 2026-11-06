@@ -1675,7 +1675,35 @@ body { max-width:100%; overflow-x:clip; }
 .fee-pix-k{font-size:20px;font-weight:900;color:var(--white,#F4EEDF);letter-spacing:.04em;user-select:all}
 .fee-pix-btn{width:100%;margin-top:4px;padding:12px;border:none;border-radius:9px;background:#25D366;color:#06210f;font-size:14px;font-weight:900;cursor:pointer}
 .fee-pix-btn.ok{background:transparent;color:#3DBE6B;border:1px solid #3DBE6B}
+.fee-items{margin:12px 0 0;display:flex;flex-direction:column;gap:6px;text-align:left}
+.fee-item{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:8px;background:var(--surface);border:1px solid var(--border);font-size:13px}
+.fee-item b{color:var(--gold)}
+.chg-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px;margin:0 0 10px}
+.chg-card.done{border-color:rgba(46,204,113,.45)}
+.chg-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.chg-head b{font-size:14px;color:var(--white,#F4EEDF)}
+.chg-head small{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.chg-tot{font-size:12px;font-weight:800;color:var(--red,#E05252);white-space:nowrap}
+.chg-card.done .chg-tot{color:var(--green,#2ECC71)}
+.chg-bar{height:5px;border-radius:4px;background:rgba(255,255,255,.08);margin:9px 0;overflow:hidden}
+.chg-bar i{display:block;height:100%;background:var(--green,#2ECC71)}
+.chg-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chg-p{display:inline-flex;align-items:center;gap:4px;padding:6px 9px;border-radius:16px;border:1px solid rgba(224,82,82,.5);background:rgba(224,82,82,.10);color:var(--white,#F4EEDF);font-size:12px;font-weight:700;cursor:pointer}
+.chg-p.paid{border-color:rgba(46,204,113,.45);background:rgba(46,204,113,.10);color:var(--green,#2ECC71)}
+.chg-p.claim{border-color:rgba(240,180,41,.55);background:rgba(240,180,41,.12);color:#F0B429}
+.chg-p .ic{width:13px;height:13px}
+.chg-empty{font-size:12px;color:var(--muted);padding:4px 2px 10px}
 .fee-note{margin-top:4px;font-size:12px;line-height:1.5;color:var(--muted)}
+.me-fee.claimed{background:rgba(240,180,41,.10);border-color:rgba(240,180,41,.45);cursor:default}
+.me-fee.claimed .ic{color:#F0B429}
+.fee-claim-btn{width:100%;margin-top:10px;padding:12px;border-radius:9px;border:1px solid var(--gold);background:rgba(212,175,55,.14);color:var(--gold);font-size:14px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.fee-modal-ico.ok{background:#3DBE6B}
+.presence-item.claimed{border-color:rgba(240,180,41,.6);background:rgba(240,180,41,.08)}
+.presence-fee.claimed{color:#F0B429}
+.legend .legend-claim .ic{color:#F0B429}
+.todo-row.claim .todo-ico{background:rgba(240,180,41,.14);color:#F0B429}
+.todo-x{flex:none;width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.todo-x .ic{width:13px;height:13px}
 .me-fee{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:10px 12px;border-radius:10px;background:rgba(224,82,82,.12);border:1px solid rgba(224,82,82,.5);font-size:12px;line-height:1.4;color:var(--white,#F4EEDF);cursor:pointer}
 .me-fee .ic{color:var(--red,#E05252);width:18px;height:18px;stroke-width:2.2}
 .me-share{margin-top:12px;width:100%;padding:13px 10px;border:none;border-radius:10px;background:#25D366;color:#06210f;font-size:14px;font-weight:900;letter-spacing:.02em;cursor:pointer}
@@ -1841,6 +1869,7 @@ body { max-width:100%; overflow-x:clip; }
 
     <div class="legend">
       <span id="legend-fee-pending"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5M12 16.2v.3"/></svg>Mensalidade em aberto</span>
+      <span class="legend-claim"><svg class="ic " viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Pagamento informado</span>
     </div>
 
     <div class="section-label">Presença <span class="cnt" id="presence-count">0</span><span class="cnt cnt-declined" id="declined-count" style="display:none">0</span></div>
@@ -2037,6 +2066,13 @@ body { max-width:100%; overflow-x:clip; }
         <button class="btn wa-btn" onclick="finSendCobranca()">📤 Cobrar pendentes</button>
         <button class="btn btn-ghost" onclick="finSubTab('people')">👥 Gerenciar pessoas</button>
       </div>
+
+      <div class="section-label" id="fin-charges-label" style="margin-top:18px">⚽ Cobranças extras</div>
+      <div class="fin-hint">
+        Rateio da bola, uniforme etc. Aparece no aviso de cada jogador junto com o Pix, e ele pode tocar em <b>Já paguei</b>. Toque no nome para marcar como pago.
+      </div>
+      <div id="fin-charges"></div>
+      <button type="button" class="btn btn-gold btn-full" onclick="chargeNewOpen()">➕ Nova cobrança extra</button>
     </div>
 
     <!-- ════ LANÇAMENTOS ════ -->
@@ -2369,7 +2405,7 @@ body { max-width:100%; overflow-x:clip; }
 <div id="recv-multi-modal-overlay" class="fin-modal-overlay" style="display:none" onclick="if(event.target===this)recvMultiClose()">
   <div class="fin-modal" onclick="event.stopPropagation()">
     <div class="fin-modal-title">
-      <span>👥 Lançar para Várias Pessoas</span>
+      <span id="recv-multi-title">👥 Lançar para Várias Pessoas</span>
       <button class="fin-modal-close" onclick="recvMultiClose()">✕</button>
     </div>
     <div class="fin-modal-row" style="flex-direction:column;gap:9px">
@@ -2378,15 +2414,16 @@ body { max-width:100%; overflow-x:clip; }
         <input class="input-txt" id="recv-multi-val" type="number" min="0" step="0.01" placeholder="R$ cada">
       </div>
       <input class="input-txt" id="recv-multi-note" type="text" maxlength="30" placeholder="Detalhe (ex: Bola nova)">
-      <label class="chk-label" style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--white)">
+      <label class="chk-label" id="recv-multi-paid-wrap" style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--white)">
         <input type="checkbox" id="recv-multi-paid" checked> ✅ Já recebido
       </label>
+      <div class="fin-hint" id="recv-multi-charge-hint" style="display:none;margin:0">Os marcados recebem o aviso no app com o Pix. Já vêm marcados os mensalistas.</div>
       <input class="input-txt" id="recv-multi-search" type="text" placeholder="🔎 Buscar..." oninput="recvMultiFilter()">
       <button type="button" class="btn btn-outline btn-sm" style="width:100%" onclick="recvMultiToggleAll()">✅ Marcar / Desmarcar Todos</button>
       <div id="recv-multi-list" class="chur-multi-list"></div>
     </div>
     <div class="fin-modal-actions" style="margin-top:14px">
-      <button class="btn btn-gold" style="flex:1" onclick="recvMultiConfirm()">➕ Lançar</button>
+      <button class="btn btn-gold" style="flex:1" id="recv-multi-ok" onclick="recvMultiConfirm()">➕ Lançar</button>
       <button class="btn btn-ghost" onclick="recvMultiClose()">Cancelar</button>
     </div>
   </div>
@@ -2805,28 +2842,106 @@ const FEE_ALERT_EVERY = 2 * 60 * 60 * 1000;
 document.addEventListener('visibilitychange', () => { if(!document.hidden) setTimeout(() => feeAlertOpen(false), 600); });
 const MONTHS_PT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 function feeOwes(p){ return !!(p && !p.isGuest && p.fee === 'pending'); }
+// "Já paguei": o jogador avisa que pagou; fica aguardando o admin confirmar.
+// Guardado no próprio jogador (p.feeClaim = {ym, at}) e vale só para o mês atual.
+function feeYM(d){ d = d || new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+function feeClaimed(p){ return !!(p && p.feeClaim && p.feeClaim.ym === feeYM()); }
+function feeClaimWhen(p){ try{ const d = new Date(p.feeClaim.at); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }catch(e){ return ''; } }
+function feeSetClaim(playerId, on){
+  const p = players.find(x => x.id === playerId); if(!p) return;
+  const claim = on ? { ym: feeYM(), at: Date.now() } : null;
+  if(claim) p.feeClaim = claim; else delete p.feeClaim;
+  localStorage.setItem(KEY, JSON.stringify(players));
+  if(typeof fbPushFeeClaim === 'function') fbPushFeeClaim(playerId, claim);
+  try{ renderPresence(); }catch(e){}
+  try{ if(finIsAdmin()) renderFin(); }catch(e){}
+}
+function feeClaimNow(){
+  const p = meGet(); if(!p) return;
+  haptic();
+  const items = payItems(p);
+  const xs = items.filter(i => i.cid != null);
+  const feeIt = items.some(i => i.fee);
+  if(feeIt) p.feeClaim = { ym: feeYM(), at: Date.now() };
+  if(xs.length){ const ec = Object.assign({}, p.extraClaims || {}); xs.forEach(i => ec[i.cid] = Date.now()); p.extraClaims = ec; }
+  localStorage.setItem(KEY, JSON.stringify(players));
+  if(typeof fbPushFeeClaim === 'function') fbPushFeeClaim(p.id, feeIt ? p.feeClaim : undefined, xs.length ? p.extraClaims : undefined);
+  try{ renderPresence(); }catch(e){}
+  document.getElementById('fee-modal-t').textContent = 'Pagamento informado';
+  document.getElementById('fee-modal-d').innerHTML =
+    `Valeu, <b>${p.name}</b>! Agora <b>mande o comprovante no grupo</b>.<br><br>Assim que o pagamento for confirmado, o aviso some.`;
+  const ico = document.querySelector('#fee-overlay .fee-modal-ico'); ico.classList.add('ok'); ico.innerHTML = ic('check');
+}
 function feeMonthName(){ return MONTHS_PT[new Date().getMonth()]; }
+
+// ─── COBRANÇAS EXTRAS (ex.: rateio da bola) ─────────────────
+// O admin cria em Financeiro › Mensalidades. O app publica no doc gameTime
+// só o resumo { id, title, val, owed:[ids dos jogadores que faltam] }, que todo
+// mundo lê. O "Já paguei" do jogador fica nele mesmo: p.extraClaims[id] = data.
+const EXTRAS_KEY = 'ufg_extras_pub_v1';
+let extrasPub = (() => { try{ const v = JSON.parse(localStorage.getItem(EXTRAS_KEY) || '[]'); return Array.isArray(v) ? v : []; }catch(e){ return []; } })();
+function extrasMine(p){ return p ? (extrasPub || []).filter(c => (c.owed || []).includes(p.id)) : []; }
+function extraClaimed(p, cid){ return !!(p && p.extraClaims && p.extraClaims[cid]); }
+// O que o jogador ainda precisa pagar (sem os que ele já avisou que pagou)
+function payItems(p){
+  const out = [];
+  if(feeOwes(p) && !feeClaimed(p)) out.push({ fee:true, label:`Mensalidade de ${feeMonthName()}`, val:null });
+  extrasMine(p).forEach(c => { if(!extraClaimed(p, c.id)) out.push({ cid:c.id, label:c.title, val:c.val }); });
+  return out;
+}
+function payClaimedItems(p){
+  const out = [];
+  if(feeOwes(p) && feeClaimed(p)) out.push({ fee:true, label:`Mensalidade de ${feeMonthName()}` });
+  extrasMine(p).forEach(c => { if(extraClaimed(p, c.id)) out.push({ cid:c.id, label:c.title }); });
+  return out;
+}
+function extraSetClaim(playerId, cid, on){
+  const p = players.find(x => x.id === playerId); if(!p) return;
+  const ec = Object.assign({}, p.extraClaims || {});
+  if(on) ec[cid] = Date.now(); else delete ec[cid];
+  if(Object.keys(ec).length) p.extraClaims = ec; else delete p.extraClaims;
+  localStorage.setItem(KEY, JSON.stringify(players));
+  if(typeof fbPushFeeClaim === 'function') fbPushFeeClaim(playerId, undefined, p.extraClaims || null);
+  try{ renderPresence(); }catch(e){}
+  try{ if(finIsAdmin()) renderFin(); }catch(e){}
+}
 function feeStrip(p){
-  if(!feeOwes(p)) return '';
-  return `<div class="me-fee" onclick="feeAlertOpen(true)">${ic('alert')}<span><b>Mensalidade de ${feeMonthName()} em aberto.</b> Toque para ver o Pix.</span></div>`;
+  const open = payItems(p), done = payClaimedItems(p);
+  if(open.length){
+    const t = open.length === 1 ? `${open[0].label} em aberto.` : `${open.length} pagamentos em aberto.`;
+    return `<div class="me-fee" onclick="feeAlertOpen(true)">${ic('alert')}<span><b>${finEsc(t)}</b> Toque para ver o Pix.</span></div>`;
+  }
+  if(done.length){
+    const t = done.length === 1 ? `Pagamento informado: ${done[0].label}.` : `${done.length} pagamentos informados.`;
+    return `<div class="me-fee claimed">${ic('clock')}<span><b>${finEsc(t)}</b> Aguardando confirmação.</span></div>`;
+  }
+  return '';
 }
 function feeAlertOpen(force){
   const p = meGet();
-  if(!feeOwes(p)) return;
+  const items = payItems(p);
+  if(!items.length) return;
   // Reaparece a cada abertura do app (no máx. 1x a cada 2h, para não incomodar no mesmo uso)
   const key = 'ufg_fee_alert_last';
   if(!force){
     try{ const last = +localStorage.getItem(key) || 0; if(Date.now() - last < FEE_ALERT_EVERY) return; }catch(e){}
-    if(typeof fbDB !== 'undefined' && fbDB && !window.__ufgPlayersReady) return; // espera o status da nuvem
+    if(typeof fbDB !== 'undefined' && fbDB && (!window.__ufgPlayersReady || !window.__ufgGameTimeReady)) return; // espera o status da nuvem
     const who = document.getElementById('who-overlay');
     if(who && who.style.display === 'flex') return;
   }
   try{ localStorage.setItem(key, String(Date.now())); }catch(e){}
-  document.getElementById('fee-modal-t').textContent = `Mensalidade de ${feeMonthName()} em aberto`;
+  const onlyFee = items.length === 1 && items[0].fee;
+  document.getElementById('fee-modal-t').textContent = items.length === 1 ? `${items[0].label} em aberto` : 'Pagamentos em aberto';
+  const icoEl = document.querySelector('#fee-overlay .fee-modal-ico'); if(icoEl){ icoEl.classList.remove('ok'); icoEl.innerHTML = ic('alert'); }
+  const vals = items.filter(i => i.val != null);
+  const listHtml = onlyFee ? '' : `<div class="fee-items">${items.map(i =>
+      `<div class="fee-item"><span>${finEsc(i.label)}</span><b>${i.val != null ? finFmt(i.val) : ''}</b></div>`).join('')}</div>`;
   document.getElementById('fee-modal-d').innerHTML =
-    `Oi, <b>${p.name}</b>! Sua mensalidade de <b>${feeMonthName()}</b> ainda consta como pendente.` +
+    (onlyFee ? `Oi, <b>${p.name}</b>! Sua mensalidade de <b>${feeMonthName()}</b> ainda consta como pendente.`
+             : `Oi, <b>${p.name}</b>! ${items.length === 1 ? 'Consta em aberto para você:' : 'Constam em aberto para você:'}${listHtml}`) +
     (FEE_PAY_INFO || `<br><br>Acerte com o administrador do grupo.`) +
-    `<div class="fee-note">Depois de pagar, mande o comprovante no grupo. Assim que o pagamento for registrado, este aviso some.</div>`;
+    `<button type="button" class="fee-claim-btn" onclick="feeClaimNow()">${ic('check')} Já paguei</button>` +
+    `<div class="fee-note">Pagou? Toque em <b>Já paguei</b> e mande o comprovante no grupo.${items.length > 1 ? ' O botão avisa todos os itens acima. Pagou só um? Mande o comprovante e avise no grupo.' : ''} Assim que o pagamento for confirmado, este aviso some.</div>`;
   document.getElementById('fee-overlay').style.display = 'flex';
 }
 function feeAlertClose(){ document.getElementById('fee-overlay').style.display = 'none'; }
@@ -2938,14 +3053,15 @@ function renderPresence(){
   try{ renderCancelBanner(); }catch(e){}
   const acts=document.getElementById('presence-admin-actions');
   if(acts) acts.style.display = presIsAdmin() ? '' : 'none';
-  el.innerHTML=sorted.map(p=>{ const can=presCanEdit(p); const owes=p.fee==='pending'&&!p.isGuest;
+  el.innerHTML=sorted.map(p=>{ const can=presCanEdit(p); const claimed=p.fee==='pending'&&!p.isGuest&&feeClaimed(p); const owes=p.fee==='pending'&&!p.isGuest&&!claimed;
     const sub=[p.isGK?'Goleiro':'', p.isGuest?'Convidado':''].filter(Boolean).join(' · ');
     return `
-    <div class="presence-item ${p.present?'selected':''} ${owes?'owes':''} ${p.declined?'declined':''} ${can?'':'locked'} ${(!presIsAdmin() && can)?'mine':''}" onclick="toggleP(${p.id})">
+    <div class="presence-item ${p.present?'selected':''} ${owes?'owes':''} ${claimed?'claimed':''} ${p.declined?'declined':''} ${can?'':'locked'} ${(!presIsAdmin() && can)?'mine':''}" onclick="toggleP(${p.id})">
       <div class="presence-check">${p.present?ic('check'):''}</div>
       <div class="presence-txt"><span class="presence-name">${p.name}</span>${sub?`<span class="presence-sub">${sub}</span>`:''}</div>
       <span class="presence-icons">
         ${owes?`<span class="presence-fee" title="Mensalidade em aberto">${ic('alert')}</span>`:''}
+        ${claimed?`<span class="presence-fee claimed" title="Avisou que pagou — aguardando confirmação">${ic('clock')}</span>`:''}
         ${can?`<span class="presence-decline-btn" title="Não vai jogar" onclick="event.stopPropagation();toggleDeclined(${p.id})">${ic('x')}</span>`:''}
       </span>
     </div>`;}).join('');
@@ -3656,6 +3772,112 @@ function finSetFeeDueDay(v){
   renderFin();
 }
 
+// ─── COBRANÇAS EXTRAS (admin) ─────────────────────────────────
+// Cada cobrança vira um lançamento "Rateio / Extra" por pessoa (chargeId), no mês
+// em que foi criada. Pago = entra no caixa como qualquer receita.
+function finCharges(){ return Array.isArray(finData.charges) ? finData.charges : []; }
+function chargeById(cid){ return finCharges().find(c => c.id === cid) || null; }
+function chargeRows(cid){
+  const out = [];
+  Object.keys(finData.months || {}).forEach(k => (finData.months[k].recvs || []).forEach(r => { if(r.chargeId === cid) out.push({ r, k }); }));
+  return out.map(({ r, k }) => { const pp = personById(r.personId); const pl = personPlayer(pp);
+    return { r, k, name: pp ? personName(pp) : r.name, pl, claim: !r.paid && extraClaimed(pl, cid) }; })
+    .sort((a,b) => a.name.localeCompare(b.name));
+}
+function chargeNewOpen(){ recvMultiOpen(true); }
+function chargeCreate(title, val, ids){
+  if(!title){ toast('⚠️ Diga o que é a cobrança (ex: Bola nova).'); return; }
+  if(finCharges().some(c => !c.closed && c.title.toLowerCase() === title.toLowerCase())){ toast('⚠️ Já existe uma cobrança aberta com esse nome.'); return; }
+  if(!Array.isArray(finData.charges)) finData.charges = [];
+  const cid = Math.max(0, ...finData.charges.map(c => c.id || 0)) + 1;
+  const now = new Date();
+  const md = finMonthDataOf(finData, now.getFullYear(), now.getMonth());
+  finData.charges.push({ id: cid, title, val, createdAt: finTodayISO(), key: finKey(now.getFullYear(), now.getMonth()) });
+  let n = 0;
+  ids.forEach(id => { const pp = personById(id); if(!pp) return;
+    md.recvs.push({ id: md.recvNextId++, name: personName(pp), val, paid:false, paidAt:null, due:null,
+                    personId: pp.id, cat:'Rateio / Extra', note: title, chargeId: cid }); n++; });
+  finSave(finData); recvMultiClose(); renderFin();
+  toast(`✅ Cobrança "${title}" criada para ${n} pessoa${n===1?'':'s'}`);
+}
+function chargeTogglePaid(cid, k, rid){
+  const md = finData.months[k]; const r = md && (md.recvs || []).find(x => x.id === rid && x.chargeId === cid);
+  if(!r) return;
+  r.paid = !r.paid; r.paidAt = r.paid ? finTodayISO() : null;
+  finSave(finData); renderFin(); haptic && haptic();
+}
+function chargeClose(cid){
+  const c = chargeById(cid); if(!c) return;
+  const rows = chargeRows(cid); const pend = rows.filter(x => !x.r.paid);
+  const msg = pend.length
+    ? (pend.length === 1 ? `Parar de cobrar "${c.title}"? ${pend[0].name} ainda não pagou: sai da cobrança e o aviso some para ele.`
+                        : `Parar de cobrar "${c.title}"? ${pend.length} pessoas que não pagaram saem da cobrança e o aviso some para elas.`) + ' O que já foi pago continua no caixa.'
+    : `Arquivar "${c.title}"? Todo mundo já pagou e o valor continua no caixa.`;
+  finConfirm(pend.length ? 'Encerrar cobrança?' : 'Arquivar cobrança?', msg, () => {
+    pend.forEach(({ r, k }) => { const md = finData.months[k]; md.recvs = md.recvs.filter(x => x !== r); });
+    c.closed = finTodayISO();
+    finSave(finData); renderFin(); toast(pend.length ? '✅ Cobrança encerrada' : '✅ Cobrança arquivada');
+  }, null, pend.length ? 'Encerrar' : 'Arquivar');
+}
+function renderCharges(){
+  const el = document.getElementById('fin-charges'); if(!el) return;
+  const open = finCharges().filter(c => !c.closed);
+  if(!open.length){ el.innerHTML = '<div class="chg-empty">Nenhuma cobrança extra aberta.</div>'; return; }
+  el.innerHTML = open.map(c => {
+    const rows = chargeRows(c.id); const paidN = rows.filter(x => x.r.paid).length;
+    const falta = rows.filter(x => !x.r.paid).reduce((s,x) => s + Number(x.r.val||0), 0);
+    const done = rows.length && paidN === rows.length;
+    const ord = x => x.r.paid ? 2 : x.claim ? 0 : 1;
+    const chips = rows.slice().sort((a,b) => ord(a) - ord(b) || a.name.localeCompare(b.name)).map(x =>
+      `<button type="button" class="chg-p ${x.r.paid ? 'paid' : x.claim ? 'claim' : ''}" title="${x.r.paid ? 'Pago — toque para desfazer' : x.claim ? 'Avisou que pagou — toque para confirmar' : 'Toque para marcar pago'}"
+        onclick="chargeTogglePaid(${c.id}, '${x.k}', ${x.r.id})">${x.r.paid ? ic('check') : x.claim ? ic('clock') : ''}${finEsc(x.name)}</button>`).join('');
+    return `<div class="chg-card ${done ? 'done' : ''}">
+      <div class="chg-head"><div><b>${finEsc(c.title)}</b><small>${finFmt(c.val)} por pessoa · ${paidN} de ${rows.length} pagaram</small></div>
+        <div class="chg-tot">${done ? 'Todos pagaram' : 'faltam ' + finFmt(falta)}</div></div>
+      <div class="chg-bar"><i style="width:${rows.length ? Math.round(paidN*100/rows.length) : 0}%"></i></div>
+      <div class="chg-list">${chips || '<span class="chg-empty">Ninguém na cobrança.</span>'}</div>
+      <div class="fin-2btn">
+        ${done ? '' : `<button type="button" class="btn wa-btn" onclick="chargeSendWa(${c.id})">📤 Cobrar no WhatsApp</button>`}
+        <button type="button" class="btn btn-ghost" onclick="chargeClose(${c.id})">${done ? 'Arquivar' : 'Encerrar'}</button>
+      </div></div>`;
+  }).join('');
+}
+function chargeWaText(c){
+  const rows = chargeRows(c.id);
+  const pixNome = (typeof FEE_PIX_LABEL !== 'undefined' ? FEE_PIX_LABEL : '').replace(/^PIX Mensalidade/i, 'Pix').trim() || 'Pix';
+  const falta = rows.filter(x => !x.r.paid).length;
+  const pad = n => String(n).padStart(2, '0');
+  let msg = `${WA_BRAND_HEADER}\n💰 *${c.title} — ${finFmt(c.val)} por pessoa*\n`;
+  if(typeof FEE_PIX_KEY !== 'undefined' && FEE_PIX_KEY) msg += `📲 *${pixNome}:* ${FEE_PIX_KEY}\n`;
+  msg += `\n⏰ Faltam *${falta}* para fechar. Bora agilizar, pessoal!\n\n`;
+  msg += `👉 Pagou? Copia a lista, coloca ✅ do lado do seu nome e manda aqui com o comprovante.\n\n`;
+  msg += rows.map((x, i) => `${pad(i+1)} - ${x.name}${x.r.paid ? ' ✅' : x.claim ? ' ⏳ (conferindo comprovante)' : ''}`).join('\n');
+  return msg;
+}
+function chargeSendWa(cid){
+  const c = chargeById(cid); if(!c) return;
+  const msg = chargeWaText(c);
+  document.getElementById('cobranca-modal-title-txt').textContent = '📤 Cobrança: ' + c.title;
+  _cobrancaModalMsg = msg;
+  document.getElementById('cobranca-modal-preview').value = msg;
+  document.getElementById('cobranca-modal-overlay').style.display = 'flex';
+}
+// Publica para os jogadores quem falta em cada cobrança aberta (doc gameTime, merge)
+let _extrasPubLast = null;
+function extrasPublish(){
+  if(!finIsAdmin()) return;
+  const list = finCharges().filter(c => !c.closed).map(c => ({ id:c.id, title:c.title, val:c.val,
+    owed: chargeRows(c.id).filter(x => !x.r.paid && x.pl).map(x => x.pl.id) })).filter(c => c.owed.length);
+  const str = JSON.stringify(list);
+  extrasPub = list; try{ localStorage.setItem(EXTRAS_KEY, str); }catch(e){}
+  if(typeof fbDB === 'undefined' || !fbDB || !fbAuth || !fbAuth.currentUser) return;
+  if(!window.__ufgGameTimeReady || str === _extrasPubLast) return;
+  _extrasPubLast = str;
+  const ts = Date.now(); _fbLastWriteTs.gameTime = ts;
+  fbDB.collection('ufg').doc('gameTime').set({ extras: list, updatedAt: ts }, { merge: true })
+    .catch(err => { _extrasPubLast = null; console.warn('Firestore write (extras):', err.message); setSyncStatus('error'); });
+}
+
 // ─── TOGGLE PAYMENT ───────────────────────────────────────────
 // Uma mensalidade por pessoa por mês: a chave é o id da pessoa, então não
 // existe como lançar duas vezes. O valor é congelado no momento do pagamento.
@@ -3909,8 +4131,10 @@ function renderFin(){
   const rc = document.getElementById('fin-rec-count');
   if(rc){ const n = (finData.recurrences||[]).filter(r => r.status === 'active').length; rc.textContent = n ? `(${n} ativo${n===1?'':'s'})` : ''; }
   renderPeople();
+  renderCharges();
   finPopulatePeopleDatalist();
   finUpdateTabBadge();
+  try{ extrasPublish(); }catch(e){}
 
   // Keep fee input in sync
   document.getElementById('fin-fee-val').value = finMonthData().feeValue||15;
@@ -4076,7 +4300,7 @@ function renderFinTodo(){
   const el = document.getElementById('fin-todo'); if(!el) return;
   const md = finMonthData();
   const s  = finMonthSummary(finYear, finMonth);
-  const rank = { overdue:0, pending:1 };
+  const rank = { claim:-1, overdue:0, pending:1 };
   const items = [];
   (md.expenses||[]).forEach(e => {
     const due = finEntryDueISO(e, finYear, finMonth); const st = finStatus(finIsExpPaid(e), due);
@@ -4086,6 +4310,19 @@ function renderFinTodo(){
       <div class="todo-t">${finEsc(e.desc)}<small>${e.recId ? 'Despesa fixa' : 'Despesa'} · ${st === 'overdue' ? 'venceu' : 'vence'} ${finFmtDate(due)} · ${finFmt(e.val)}</small></div>
       <button type="button" class="todo-btn ${st === 'overdue' ? 'red' : 'gold'}" onclick="finToggleExpense(${e.id})">${ic('check')} Pagar</button></div>` });
   });
+  // Quem avisou que pagou (só no mês atual) — confirmar com 1 toque
+  const nowD = new Date();
+  if(finYear === nowD.getFullYear() && finMonth === nowD.getMonth()){
+    finMensalistas(finYear, finMonth).forEach(pp => {
+      const pl = personPlayer(pp);
+      if(!pl || !feeClaimed(pl) || finIsFeePaid(md, pp)) return;
+      items.push({ st:'claim', due:'', html: `<div class="todo-row claim">
+        <div class="todo-ico">${ic('clock')}</div>
+        <div class="todo-t">${finEsc(personName(pp))} avisou que pagou<small>Mensalidade · informado ${feeClaimWhen(pl)} · confira o comprovante</small></div>
+        <button type="button" class="todo-btn green" onclick="finTogglePaid(${pp.id})">${ic('check')} Confirmar</button>
+        <button type="button" class="todo-x" title="Não recebi" onclick="feeSetClaim(${pl.id}, false)">${ic('x')}</button></div>` });
+    });
+  }
   const feeN = s.feePend.length + s.feeOver.length;
   if(feeN){
     const tot = finMensalistas(finYear, finMonth).length;
@@ -4095,7 +4332,22 @@ function renderFinTodo(){
       <div class="todo-t">Mensalidades em aberto<small>${feeN} de ${tot} pessoa${tot===1?'':'s'} · ${finFmt(s.feePendVal + s.feeOverVal)}${st === 'overdue' ? ' · vencidas' : ''}</small></div>
       <button type="button" class="todo-btn gold" onclick="finSubTab('fees')">Ver</button></div>` });
   }
+  finCharges().filter(c => !c.closed).forEach(c => {
+    const rows = chargeRows(c.id);
+    rows.filter(x => x.claim).forEach(x => items.push({ st:'claim', due:'', html: `<div class="todo-row claim">
+      <div class="todo-ico">${ic('clock')}</div>
+      <div class="todo-t">${finEsc(x.name)} avisou que pagou<small>${finEsc(c.title)} · ${finFmt(x.r.val)} · confira o comprovante</small></div>
+      <button type="button" class="todo-btn green" onclick="chargeTogglePaid(${c.id}, '${x.k}', ${x.r.id})">${ic('check')} Confirmar</button>
+      <button type="button" class="todo-x" title="Não recebi" onclick="extraSetClaim(${x.pl.id}, ${c.id}, false)">${ic('x')}</button></div>` }));
+    const pend = rows.filter(x => !x.r.paid);
+    if(!pend.length) return;
+    items.push({ st:'pending', due:'', html: `<div class="todo-row pending">
+      <div class="todo-ico">${ic('users')}</div>
+      <div class="todo-t">${finEsc(c.title)}: faltam ${pend.length}<small>Cobrança extra · ${rows.length - pend.length} de ${rows.length} pagaram · ${finFmt(pend.reduce((s,x)=>s+Number(x.r.val||0),0))}</small></div>
+      <button type="button" class="todo-btn gold" onclick="finSubTab('fees');setTimeout(()=>{const e=document.getElementById('fin-charges-label');if(e)e.scrollIntoView({behavior:'smooth'});},150)">Ver</button></div>` });
+  });
   (md.recvs||[]).forEach(r => {
+    if(r.chargeId) return; // cobranças extras aparecem agrupadas acima
     const due = finEntryDueISO(r, finYear, finMonth); const st = finStatus(r.paid, due);
     if(st === 'paid') return;
     items.push({ st, due, html: `<div class="todo-row ${st}">
@@ -4189,15 +4441,18 @@ function renderFinFeeGrid(){
   const feeRow = pp => {
     const fee = md.fees[pp.id]; const isPaid = !!fee;
     const fv  = isPaid ? fee.val : personFee(pp, dfv);
+    const plC = personPlayer(pp); const claim = !isPaid && plC && feeClaimed(plC);
     const own = pp.customFee != null && pp.customFee > 0 ? '<span class="fee-chip">valor próprio</span>' : '';
     const sub = isPaid ? `pago${fee.paidAt ? ' ' + finFmtDate(fee.paidAt) : ''} · ${finFmt(fv)}`
+              : claim ? `avisou que pagou ${feeClaimWhen(plC)} · ${finFmt(fv)}`
                        : `${finFmt(fv)} · ${feeOverdue ? 'venceu' : 'vence'} ${finFmtDate(finFeeDueISO(finYear, finMonth))}`;
-    return `<div class="todo-row ${isPaid ? 'paid' : (feeOverdue ? 'overdue' : 'pending')}">
-      <div class="todo-ico">${ic(isPaid ? 'check' : 'alert')}</div>
+    return `<div class="todo-row ${isPaid ? 'paid' : claim ? 'claim' : (feeOverdue ? 'overdue' : 'pending')}">
+      <div class="todo-ico">${ic(isPaid ? 'check' : claim ? 'clock' : 'alert')}</div>
       <div class="todo-t">${finEsc(personName(pp))}${own}<small>${sub}</small></div>
-      <button type="button" class="todo-btn ${isPaid ? 'green' : 'gold'}" onclick="finTogglePaid(${pp.id})">${isPaid ? ic('check') + ' Pago' : 'Marcar pago'}</button></div>`;
+      <button type="button" class="todo-btn ${isPaid || claim ? 'green' : 'gold'}" onclick="finTogglePaid(${pp.id})">${isPaid ? ic('check') + ' Pago' : claim ? ic('check') + ' Confirmar' : 'Marcar pago'}</button></div>`;
   };
-  const pend = list.filter(pp => !md.fees[pp.id]), paid = list.filter(pp => md.fees[pp.id]);
+  const isCl = pp => { const pl = personPlayer(pp); return !!(pl && feeClaimed(pl)); };
+  const pend = list.filter(pp => !md.fees[pp.id]).sort((a,b) => (isCl(b)?1:0) - (isCl(a)?1:0)), paid = list.filter(pp => md.fees[pp.id]);
   grid.innerHTML =
     (pend.length ? `<div class="section-label">Pendentes <span class="cnt">${pend.length}</span></div><div class="fin-todo">${pend.map(feeRow).join('')}</div>` : '') +
     (paid.length ? `<div class="section-label">Pagos <span class="cnt">${paid.length}</span></div><div class="fin-todo">${paid.map(feeRow).join('')}</div>` : '');
@@ -4695,11 +4950,12 @@ function finSendCobranca(){
 
   // Receitas avulsas ainda não pagas neste mês — "vencido" pelo vencimento de cada uma
   const recvPend = (md.recvs||[])
-    .filter(r => !r.paid)
+    .filter(r => !r.paid && !r.chargeId)
     .sort((a,b)=>a.name.localeCompare(b.name));
   const recvOverdue = recvPend.some(r => finStatus(false, finEntryDueISO(r, finYear, finMonth)) === 'overdue');
 
-  if(!pendList.length && !recvPend.length){
+  const chargesOpen = finCharges().filter(c => !c.closed).map(c => ({ c, pend: chargeRows(c.id).filter(x => !x.r.paid) })).filter(x => x.pend.length);
+  if(!pendList.length && !recvPend.length && !chargesOpen.length){
     toast('✅ Ninguém está pendente este mês!');
     return;
   }
@@ -4709,6 +4965,7 @@ function finSendCobranca(){
   const pixNome = (typeof FEE_PIX_LABEL !== 'undefined' ? FEE_PIX_LABEL : '').replace(/^PIX Mensalidade/i, 'Pix').trim() || 'Pix';
   const owed    = new Map(pendList.map(p => [p.name, p.months]));
   const todos   = mensal.map(personName).sort((a,b) => a.localeCompare(b));
+  const avisou  = new Set(mensal.filter(pp => { const pl = personPlayer(pp); return !finIsFeePaid(md, pp) && pl && feeClaimed(pl); }).map(personName));
   const pad     = n => String(n).padStart(2, '0');
   let jogo = '';
   try{ jogo = `${String(WEEKDAYS[GAME_WEEKDAY]).toLowerCase()} (${fmtGameDate(getNextGameDate())})`; }catch(e){ jogo = 'sexta'; }
@@ -4721,7 +4978,7 @@ function finSendCobranca(){
   msg += `👉 Pagou? Copia a lista, coloca ✅ do lado do seu nome e manda aqui com o comprovante.\n\n`;
   msg += todos.map((n, i) => {
     const m = owed.get(n);
-    return `${pad(i + 1)} - ${n}${m === undefined ? ' ✅' : (m > 1 ? ` (${m} meses em aberto)` : '')}`;
+    return `${pad(i + 1)} - ${n}${m === undefined ? ' ✅' : avisou.has(n) ? ' ⏳ (conferindo comprovante)' : (m > 1 ? ` (${m} meses em aberto)` : '')}`;
   }).join('\n');
 
   if(recvPend.length){
@@ -4729,6 +4986,9 @@ function finSendCobranca(){
     msg += `\n\n⚠️ *Avulsos ${label} (${recvPend.length}):*\n`;
     msg += recvPend.map(r => `• ${finRecvLabel(r)} — ${finFmt(r.val)} _(${finRecvCat(r)})_`).join('\n');
   }
+  chargesOpen.forEach(({ c, pend }) => {
+    msg += `\n\n⚽ *${c.title} (${finFmt(c.val)}):* ainda falta${pend.length===1?'':'m'} ${pend.map(x => x.name + (x.claim ? ' ⏳' : '')).join(', ')}. Aproveita e manda junto com a mensalidade 🙏`;
+  });
 
   document.getElementById('cobranca-modal-title-txt').textContent = '📤 Cobrança de Mensalidade';
   _cobrancaModalMsg = msg; // guarda o texto original, útil se no futuro quisermos um botão "restaurar"
@@ -6107,6 +6367,25 @@ function fbPushPresence(id, fields){
   }).then(arr => { delete _fbPendingPresence[id]; fbApplyPlayersResult(arr, ts); })
     .catch(err => { console.warn('Firestore presença:', err.message); setSyncStatus('error'); toast('⚠️ Não salvou na nuvem. Confira a internet e toque de novo.'); });
 }
+// claim: objeto/null para gravar o "Já paguei" da mensalidade; undefined = não mexe.
+// extraClaims: objeto/null para gravar os das cobranças extras; undefined = não mexe.
+function fbPushFeeClaim(id, claim, extraClaims){
+  if(!fbDB || !fbAuth || !fbAuth.currentUser || !window.__ufgPlayersReady) return;
+  const ref = fbDB.collection('ufg').doc('players'); let ts;
+  setSyncStatus('syncing');
+  return fbDB.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    const arr = (snap.exists && Array.isArray(snap.data().data)) ? snap.data().data : JSON.parse(JSON.stringify(players));
+    const cp = arr.find(x => x.id === id); if(!cp) return arr;
+    if(claim !== undefined){ if(claim) cp.feeClaim = claim; else delete cp.feeClaim; }
+    if(extraClaims !== undefined){ if(extraClaims && Object.keys(extraClaims).length) cp.extraClaims = extraClaims; else delete cp.extraClaims; }
+    listAutoReset(arr);
+    ts = Date.now(); _fbLastWriteTs.players = ts;
+    tx.set(ref, { data: arr, updatedAt: ts });
+    return arr;
+  }).then(arr => fbApplyPlayersResult(arr, ts))
+    .catch(err => { console.warn('Firestore (pagamento informado):', err.message); setSyncStatus('error'); toast('⚠️ Não salvou na nuvem. Confira a internet e tente de novo.'); });
+}
 function fbFlushPendingPresence(){
   Object.keys(_fbPendingPresence).forEach(k => {
     const id = isNaN(+k) ? k : +k;
@@ -6137,6 +6416,10 @@ function fbPushPlayers(local, overridePresence){
         if(c.markFor) p.markFor = c.markFor; else delete p.markFor;
       });
     }
+    // "Já paguei" é sempre o da nuvem (quem escreve é o próprio jogador)
+    { const byId = new Map(cloud.map(x => [x.id, x]));
+      mine.forEach(p => { const c = byId.get(p.id); if(!c) return; if(c.feeClaim) p.feeClaim = c.feeClaim; else delete p.feeClaim;
+        if(c.extraClaims) p.extraClaims = c.extraClaims; else delete p.extraClaims; }); }
     listAutoReset(mine);
     ts = Date.now(); _fbLastWriteTs.players = ts;
     tx.set(ref, { data: mine, updatedAt: ts });
@@ -6239,9 +6522,16 @@ function fbStartSync(){
   }, err => { console.warn('Firestore sync (players):', err.message); setSyncStatus('error'); });
 
   // Horário do jogo — disponível para admin e jogador (aparece na aba Dia de Jogo)
+  window.__ufgGameTimeReady = false;
   _fbUnsubGameTime = fbDB.collection('ufg').doc('gameTime').onSnapshot(snap => {
-    if(!snap.exists) return;
+    window.__ufgGameTimeReady = true;
+    if(!snap.exists){ extrasPub = []; _extrasPubLast = '[]'; try{ renderPresence(); }catch(e){} return; }
     const d = snap.data();
+    extrasPub = Array.isArray(d.extras) ? d.extras : [];
+    _extrasPubLast = JSON.stringify(extrasPub);
+    try{ localStorage.setItem(EXTRAS_KEY, _extrasPubLast); }catch(e){}
+    try{ renderPresence(); }catch(e){}
+    try{ if(finIsAdmin()) extrasPublish(); }catch(e){}
     if(d.updatedAt === _fbLastWriteTs.gameTime) return;
     gameCancel = d.cancel || null;
     try{ localStorage.setItem(GAME_CANCEL_KEY, JSON.stringify(gameCancel)); }catch(e){}
@@ -6357,17 +6647,27 @@ function ppChargeGuest(id){
 }
 
 // ─── RECEITA PARA VÁRIAS PESSOAS (ex.: rateio da bola) ─────────
-function recvMultiOpen(){
+let _recvMultiCharge = false;
+function recvMultiOpen(asCharge){
+  _recvMultiCharge = !!asCharge;
+  document.getElementById('recv-multi-title').textContent = asCharge ? '⚽ Nova cobrança extra' : '👥 Lançar para Várias Pessoas';
+  document.getElementById('recv-multi-cat').style.display = asCharge ? 'none' : '';
+  document.getElementById('recv-multi-paid-wrap').style.display = asCharge ? 'none' : 'flex';
+  document.getElementById('recv-multi-charge-hint').style.display = asCharge ? '' : 'none';
+  document.getElementById('recv-multi-ok').textContent = asCharge ? '➕ Criar cobrança' : '➕ Lançar';
   finPopulateCatSelect('recv-multi-cat', 'Rateio / Extra', RECV_CATEGORIES);
   document.getElementById('recv-multi-val').value = '';
   document.getElementById('recv-multi-note').value = '';
   document.getElementById('recv-multi-search').value = '';
-  document.getElementById('recv-multi-paid').checked = true;
+  document.getElementById('recv-multi-paid').checked = !asCharge;
+  document.getElementById('recv-multi-note').placeholder = asCharge ? 'O que é? (ex: Bola nova)' : 'Detalhe (ex: Bola nova)';
+  const nowD = new Date();
+  const mens = new Set(asCharge ? finMensalistas(nowD.getFullYear(), nowD.getMonth()).map(pp => pp.id) : []);
   const list = finPeopleOf().filter(pp => pp.active !== false && (pp.playerId == null || personPlayer(pp)))
     .sort((a,b) => personName(a).localeCompare(personName(b)));
   document.getElementById('recv-multi-list').innerHTML = list.length
     ? list.map(pp => `<label class="chur-multi-item" data-name="${finEsc(personName(pp).toLowerCase())}">
-        <input type="checkbox" value="${pp.id}"><span>${finEsc(personName(pp))}</span></label>`).join('')
+        <input type="checkbox" value="${pp.id}"${mens.has(pp.id) ? ' checked' : ''}><span>${finEsc(personName(pp))}</span></label>`).join('')
     : '<div class="chur-multi-empty">Nenhuma pessoa cadastrada.</div>';
   document.getElementById('recv-multi-modal-overlay').style.display = 'flex';
 }
@@ -6396,6 +6696,7 @@ function recvMultiConfirm(){
   const ids  = [...document.querySelectorAll('#recv-multi-list input:checked')].map(b => Number(b.value));
   if(val <= 0){ toast('⚠️ Informe o valor por pessoa.'); return; }
   if(!ids.length){ toast('⚠️ Marque ao menos uma pessoa.'); return; }
+  if(_recvMultiCharge){ chargeCreate(note, val, ids); return; }
   const md = finMonthData();
   let added = 0, skipped = 0;
   ids.forEach(id => {
