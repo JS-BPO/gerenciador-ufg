@@ -1692,6 +1692,20 @@ body { max-width:100%; overflow-x:clip; }
 .chg-p.paid{border-color:rgba(46,204,113,.45);background:rgba(46,204,113,.10);color:var(--green,#2ECC71)}
 .chg-p.claim{border-color:rgba(240,180,41,.55);background:rgba(240,180,41,.12);color:#F0B429}
 .chg-p .ic{width:13px;height:13px}
+.chg-p small{font-size:10px;font-weight:700;opacity:.85;margin-left:3px}
+.chg-p.part{border-color:rgba(240,180,41,.45);background:rgba(240,180,41,.08)}
+.chg-sh-st{font-size:13px;line-height:1.6;color:var(--muted);margin:2px 0 12px}
+.chg-sh-st b{color:var(--white,#F4EEDF)} .chg-sh-st b.ok{color:var(--green,#2ECC71)}
+.chg-sh-st .cl{color:#F0B429;display:inline-flex;align-items:center;gap:4px}
+.chg-sh-st .cl .ic{width:13px;height:13px}
+.chg-sh-row{display:flex;gap:8px;margin-top:10px}
+.chg-sh-row .input-txt{flex:1 1 0;min-width:0}
+.chg-sh-row .btn{flex:0 0 auto;white-space:nowrap}
+.chg-sh-hint{font-size:11px;line-height:1.5;color:var(--muted);margin:6px 2px 0}
+.chg-sh-links{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;justify-content:center}
+.chg-sh-links button{background:none;border:0;color:var(--muted);font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.chg-sh-links button.red{color:var(--red,#E05252)}
+.chg-sh-links .ic{width:14px;height:14px}
 .chg-empty{font-size:12px;color:var(--muted);padding:4px 2px 10px}
 .fee-note{margin-top:4px;font-size:12px;line-height:1.5;color:var(--muted)}
 .me-fee.claimed{background:rgba(240,180,41,.10);border-color:rgba(240,180,41,.45);cursor:default}
@@ -2069,7 +2083,7 @@ body { max-width:100%; overflow-x:clip; }
 
       <div class="section-label" id="fin-charges-label" style="margin-top:18px">⚽ Cobranças extras</div>
       <div class="fin-hint">
-        Rateio da bola, uniforme etc. Aparece no aviso de cada jogador junto com o Pix, e ele pode tocar em <b>Já paguei</b>. Toque no nome para marcar como pago.
+        Rateio da bola, uniforme etc. Aparece no aviso de cada jogador junto com o Pix, e ele pode tocar em <b>Já paguei</b>. Toque no nome para registrar o pagamento (tudo ou só uma parte) ou mudar quanto a pessoa deve.
       </div>
       <div id="fin-charges"></div>
       <button type="button" class="btn btn-gold btn-full" onclick="chargeNewOpen()">➕ Nova cobrança extra</button>
@@ -2106,7 +2120,7 @@ body { max-width:100%; overflow-x:clip; }
       <!-- ── CONTAS A RECEBER (convidados e avulsos) ── -->
       <div class="ent-in"><div class="section-label">📥 Entradas</div>
       <div class="fin-hint">
-        Convidados, patrocínio etc. Toque no item para marcar como recebido. Valor para várias pessoas (rateio da bola, uniforme) vira uma <b>cobrança extra</b>, acompanhada em Mensalidades.
+        Convidados, patrocínio etc. Toque no item para marcar como recebido. Valor para várias pessoas (rateio da bola, uniforme)? Use <a href="#" onclick="finSubTab('fees');setTimeout(()=>{const e=document.getElementById('fin-charges-label');if(e)e.scrollIntoView({behavior:'smooth'});},150);return false" style="color:var(--gold);font-weight:800">Mensalidades › Cobranças extras</a>.
       </div>
 
       <div class="add-form fin-exp-form" style="display:none">
@@ -2121,7 +2135,6 @@ body { max-width:100%; overflow-x:clip; }
           <button class="btn btn-gold" onclick="finAddRecv()">➕</button>
         </div>
       </div>
-      <button type="button" class="btn btn-outline btn-sm" style="width:100%;margin-bottom:8px" onclick="chargeNewOpen()">👥 Cobrar várias pessoas (ex: rateio da bola)</button>
 
       <div id="fin-recv-list"></div>
       </div>
@@ -2419,7 +2432,8 @@ body { max-width:100%; overflow-x:clip; }
       </label>
       <div class="fin-hint" id="recv-multi-charge-hint" style="display:none;margin:0">Os marcados recebem o aviso no app com o Pix. Já vêm marcados os mensalistas. Se o pessoal já pagou, marque <b>Já recebido</b> (não gera aviso).</div>
       <input class="input-txt" id="recv-multi-search" type="text" placeholder="🔎 Buscar..." oninput="recvMultiFilter()">
-      <button type="button" class="btn btn-outline btn-sm" style="width:100%" onclick="recvMultiToggleAll()">✅ Marcar / Desmarcar Todos</button>
+      <div style="display:flex;gap:8px"><button type="button" class="btn btn-outline btn-sm" style="flex:1" onclick="recvMultiSetAll(true)">Marcar todos</button>
+        <button type="button" class="btn btn-ghost btn-sm" style="flex:1" onclick="recvMultiSetAll(false)">Nenhum</button></div>
       <div id="recv-multi-list" class="chur-multi-list"></div>
     </div>
     <div class="fin-modal-actions" style="margin-top:14px">
@@ -2465,6 +2479,12 @@ body { max-width:100%; overflow-x:clip; }
       <button class="btn btn-gold" style="flex:1" onclick="finCobrancaModalSend()">📤 Enviar</button>
       <button class="btn btn-ghost" onclick="finCobrancaModalCancel()">Cancelar</button>
     </div>
+  </div>
+</div>
+<div id="chg-sheet" class="fin-modal-overlay" style="display:none" onclick="if(event.target===this)chgSheetClose()">
+  <div class="fin-modal" onclick="event.stopPropagation()">
+    <div class="fin-modal-title"><span id="chg-sheet-t"></span><button class="fin-modal-close" onclick="chgSheetClose()">✕</button></div>
+    <div id="chg-sheet-d"></div>
   </div>
 </div>
 <div id="fin-confirm-overlay" class="fin-modal-overlay" style="display:none" onclick="finConfirmCancel()">
@@ -2886,7 +2906,7 @@ function extraClaimed(p, cid){ return !!(p && p.extraClaims && p.extraClaims[cid
 function payItems(p){
   const out = [];
   if(feeOwes(p) && !feeClaimed(p)) out.push({ fee:true, label:`Mensalidade de ${feeMonthName()}`, val:null });
-  extrasMine(p).forEach(c => { if(!extraClaimed(p, c.id)) out.push({ cid:c.id, label:c.title, val:c.val }); });
+  extrasMine(p).forEach(c => { if(!extraClaimed(p, c.id)) out.push({ cid:c.id, label:c.title, val:(c.amt && c.amt[p.id] != null) ? c.amt[p.id] : c.val }); });
   return out;
 }
 function payClaimedItems(p){
@@ -3373,6 +3393,9 @@ function finMigrate(data){
     if(!md || !md.recvs || !md.recvs.length) return;
     const fv = md.feeValue || 15;
     md.recvs = md.recvs.filter(r => {
+      // Lançamentos da versão nova (com categoria, pessoa ou cobrança extra) nunca são
+      // mexidos: ex. rateio da bola de R$ 15 tem o mesmo valor da mensalidade e é legítimo.
+      if(r.cat || r.chargeId || r.personId != null || r.note) return true;
       // Mantém recvs que foram editados (valor ≠ padrão) — claramente manuais
       if(r.val !== fv) return true;
       // Mantém recvs pagos — já entraram no saldo, não mexer
@@ -3777,13 +3800,28 @@ function finSetFeeDueDay(v){
 // em que foi criada. Pago = entra no caixa como qualquer receita.
 function finCharges(){ return Array.isArray(finData.charges) ? finData.charges : []; }
 function chargeById(cid){ return finCharges().find(c => c.id === cid) || null; }
+// Uma linha por pessoa, somando os lançamentos dela na cobrança (pagamento parcial
+// vira um lançamento pago + o restante em aberto).
 function chargeRows(cid){
-  const out = [];
-  Object.keys(finData.months || {}).forEach(k => (finData.months[k].recvs || []).forEach(r => { if(r.chargeId === cid) out.push({ r, k }); }));
-  return out.map(({ r, k }) => { const pp = personById(r.personId); const pl = personPlayer(pp);
-    return { r, k, name: pp ? personName(pp) : r.name, pl, claim: !r.paid && extraClaimed(pl, cid) }; })
-    .sort((a,b) => a.name.localeCompare(b.name));
+  const by = new Map();
+  Object.keys(finData.months || {}).forEach(k => (finData.months[k].recvs || []).forEach(r => {
+    if(r.chargeId !== cid) return;
+    const pk = r.personId != null ? 'p' + r.personId : 'n' + r.name;
+    if(!by.has(pk)){ const pp = personById(r.personId); const pl = personPlayer(pp);
+      by.set(pk, { pk, name: pp ? personName(pp) : r.name, pp, pl, recs: [] }); }
+    by.get(pk).recs.push({ r, k });
+  }));
+  return [...by.values()].map(x => {
+    x.paidSum = x.recs.filter(e => e.r.paid).reduce((s,e) => s + Number(e.r.val||0), 0);
+    x.open    = x.recs.filter(e => !e.r.paid).reduce((s,e) => s + Number(e.r.val||0), 0);
+    x.open    = Math.round(x.open * 100) / 100;
+    x.done    = x.open <= 0;
+    x.partial = !x.done && x.paidSum > 0;
+    x.claim   = !x.done && extraClaimed(x.pl, cid);
+    return x;
+  }).sort((a,b) => a.name.localeCompare(b.name));
 }
+function chargeRow(cid, pk){ return chargeRows(cid).find(x => x.pk === pk) || null; }
 function chargeNewOpen(){ recvMultiOpen(true); }
 function chargeCreate(title, val, ids, cat, paid){
   cat = cat || 'Rateio / Extra'; paid = !!paid;
@@ -3802,21 +3840,99 @@ function chargeCreate(title, val, ids, cat, paid){
   toast(paid ? `✅ "${title}" lançado como recebido de ${n} pessoa${n===1?'':'s'}` : `✅ Cobrança "${title}" criada para ${n} pessoa${n===1?'':'s'}`);
   if(!paid && finCurrentSub !== 'fees'){ finSubTab('fees'); setTimeout(() => { const e = document.getElementById('fin-charges-label'); if(e) e.scrollIntoView({ behavior:'smooth' }); }, 150); }
 }
-function chargeTogglePaid(cid, k, rid){
-  const md = finData.months[k]; const r = md && (md.recvs || []).find(x => x.id === rid && x.chargeId === cid);
-  if(!r) return;
-  r.paid = !r.paid; r.paidAt = r.paid ? finTodayISO() : null;
-  finSave(finData); renderFin(); haptic && haptic();
+// Junta o que está em aberto da pessoa num lançamento só e devolve ele
+function chargeMergeOpen(x){
+  const opens = x.recs.filter(e => !e.r.paid);
+  if(!opens.length) return null;
+  const keep = opens[0];
+  keep.r.val = Math.round(opens.reduce((s,e) => s + Number(e.r.val||0), 0) * 100) / 100;
+  opens.slice(1).forEach(({ r, k }) => { const md = finData.months[k]; md.recvs = md.recvs.filter(y => y !== r); });
+  return keep;
 }
+function chargeAfterChange(x, cid, msg){
+  if(x && x.pl && extraClaimed(x.pl, cid)) extraSetClaim(x.pl.id, cid, false);
+  finSave(finData); renderFin(); chgSheetClose(); try{ haptic(); }catch(e){} if(msg) toast(msg);
+}
+// Recebeu: valor vazio = tudo o que falta; menor que o que falta = parcial
+function chargeReceive(cid, pk, amount){
+  const x = chargeRow(cid, pk); if(!x || x.done) return;
+  const keep = chargeMergeOpen(x); if(!keep) return;
+  const r = keep.r, md = finMonthDataOf(finData, ...Object.values(finParseKey(keep.k)));
+  const amt = amount == null ? r.val : Math.round(Number(amount) * 100) / 100;
+  if(!(amt > 0)){ toast('⚠️ Informe quanto recebeu.'); return; }
+  if(amt >= r.val){
+    r.paid = true; r.paidAt = finTodayISO();
+    chargeAfterChange(x, cid, `✅ ${x.name}: ${finFmt(r.val)} recebido`);
+    return;
+  }
+  r.val = Math.round((r.val - amt) * 100) / 100;
+  md.recvs.push(Object.assign({}, r, { id: md.recvNextId++, val: amt, paid: true, paidAt: finTodayISO(), partial: true }));
+  chargeAfterChange(x, cid, `✅ ${x.name}: ${finFmt(amt)} recebido · falta ${finFmt(r.val)}`);
+}
+// Muda quanto a pessoa ainda deve (ex.: já tinha pago parte antes, fora do app)
+function chargeSetOwed(cid, pk, amount){
+  const x = chargeRow(cid, pk); if(!x) return;
+  const v = Math.round(Number(amount) * 100) / 100;
+  if(!(v >= 0)){ toast('⚠️ Informe o valor.'); return; }
+  const keep = chargeMergeOpen(x);
+  if(v === 0){ if(keep){ const md = finData.months[keep.k]; md.recvs = md.recvs.filter(y => y !== keep.r); } chargeAfterChange(x, cid, `✅ ${x.name} não deve mais nada`); return; }
+  if(keep){ keep.r.val = v; }
+  else {
+    const base = x.recs[0]; const md = finData.months[base.k];
+    md.recvs.push(Object.assign({}, base.r, { id: md.recvNextId++, val: v, paid: false, paidAt: null, partial: undefined }));
+  }
+  chargeAfterChange(x, cid, `✅ ${x.name} agora deve ${finFmt(v)}`);
+}
+function chargeRemove(cid, pk){
+  const x = chargeRow(cid, pk); if(!x) return;
+  x.recs.filter(e => !e.r.paid).forEach(({ r, k }) => { const md = finData.months[k]; md.recvs = md.recvs.filter(y => y !== r); });
+  chargeAfterChange(x, cid, `✅ ${x.name} saiu da cobrança${x.paidSum ? ' (o que pagou continua no caixa)' : ''}`);
+}
+function chargeUndo(cid, pk){
+  const x = chargeRow(cid, pk); if(!x) return;
+  const paid = x.recs.filter(e => e.r.paid); if(!paid.length) return;
+  const last = paid.sort((a,b) => String(a.r.paidAt||'').localeCompare(String(b.r.paidAt||'')) || a.r.id - b.r.id).at(-1);
+  last.r.paid = false; last.r.paidAt = null; delete last.r.partial;
+  chargeMergeOpen(chargeRow(cid, pk));
+  chargeAfterChange(null, cid, `↩️ Pagamento de ${x.name} desfeito`);
+}
+// Compatível com o "Confirmar" antigo: recebe tudo o que falta
+function chargeTogglePaid(cid, pk){ chargeReceive(cid, pk, null); }
+
+// Tela rápida da pessoa na cobrança
+let _chgSheet = null;
+function chgSheetOpen(cid, pk){
+  const c = chargeById(cid), x = chargeRow(cid, pk); if(!c || !x) return;
+  _chgSheet = { cid, pk };
+  document.getElementById('chg-sheet-t').textContent = x.name + ' · ' + c.title;
+  const st = x.done ? `<b class="ok">Pagou tudo</b> · ${finFmt(x.paidSum)}`
+    : `Deve <b>${finFmt(x.open)}</b>${x.paidSum ? ` · já pagou ${finFmt(x.paidSum)}` : ''}${x.claim ? `<br><span class="cl">${ic('clock')} Avisou no app que pagou</span>` : ''}`;
+  let h = `<div class="chg-sh-st">${st}</div>`;
+  if(!x.done){
+    h += `<button type="button" class="btn btn-gold btn-full" onclick="chargeReceive(${cid}, '${pk}', null)">${ic('check')} Recebi ${finFmt(x.open)}</button>
+      <div class="chg-sh-row"><input class="input-txt" id="chg-sh-part" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Recebi só… R$">
+        <button type="button" class="btn btn-outline" onclick="chargeReceive(${cid}, '${pk}', document.getElementById('chg-sh-part').value)">Registrar parte</button></div>`;
+  }
+  h += `<div class="chg-sh-row"><input class="input-txt" id="chg-sh-owed" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Deve quanto? R$">
+      <button type="button" class="btn btn-ghost" onclick="chargeSetOwed(${cid}, '${pk}', document.getElementById('chg-sh-owed').value)">Mudar valor</button></div>
+    <div class="chg-sh-hint">Use <b>Mudar valor</b> quando a pessoa já pagou uma parte por fora (ex.: devia ${finFmt(c.val)}, pagou ${finFmt(5)} antes, fica devendo ${finFmt(Math.max(0, c.val - 5))}).</div>
+    <div class="chg-sh-links">
+      ${x.paidSum ? `<button type="button" onclick="chargeUndo(${cid}, '${pk}')">${ic('refresh')} Desfazer último pagamento</button>` : ''}
+      ${x.done ? '' : `<button type="button" class="red" onclick="chargeRemove(${cid}, '${pk}')">${ic('x')} Tirar da cobrança</button>`}
+    </div>`;
+  document.getElementById('chg-sheet-d').innerHTML = h;
+  document.getElementById('chg-sheet').style.display = 'flex';
+}
+function chgSheetClose(){ const e = document.getElementById('chg-sheet'); if(e) e.style.display = 'none'; _chgSheet = null; }
+
 function chargeClose(cid){
   const c = chargeById(cid); if(!c) return;
-  const rows = chargeRows(cid); const pend = rows.filter(x => !x.r.paid);
-  const msg = pend.length
-    ? (pend.length === 1 ? `Parar de cobrar "${c.title}"? ${pend[0].name} ainda não pagou: sai da cobrança e o aviso some para ele.`
-                        : `Parar de cobrar "${c.title}"? ${pend.length} pessoas que não pagaram saem da cobrança e o aviso some para elas.`) + ' O que já foi pago continua no caixa.'
-    : `Arquivar "${c.title}"? Todo mundo já pagou e o valor continua no caixa.`;
+  const pend = chargeRows(cid).filter(x => !x.done);
+  const msg = (pend.length === 0 ? `Arquivar "${c.title}"? Todo mundo já pagou.`
+    : pend.length === 1 ? `Parar de cobrar "${c.title}"? ${pend[0].name} ainda deve ${finFmt(pend[0].open)}: sai da cobrança e o aviso some para ele.`
+    : `Parar de cobrar "${c.title}"? ${pend.length} pessoas que não pagaram saem da cobrança e o aviso some para elas.`) + ' O que já foi pago continua no caixa.';
   finConfirm(pend.length ? 'Encerrar cobrança?' : 'Arquivar cobrança?', msg, () => {
-    pend.forEach(({ r, k }) => { const md = finData.months[k]; md.recvs = md.recvs.filter(x => x !== r); });
+    pend.forEach(x => x.recs.filter(e => !e.r.paid).forEach(({ r, k }) => { const md = finData.months[k]; md.recvs = md.recvs.filter(y => y !== r); }));
     c.closed = finTodayISO();
     finSave(finData); renderFin(); toast(pend.length ? '✅ Cobrança encerrada' : '✅ Cobrança arquivada');
   }, null, pend.length ? 'Encerrar' : 'Arquivar');
@@ -3826,17 +3942,19 @@ function renderCharges(){
   const open = finCharges().filter(c => !c.closed);
   if(!open.length){ el.innerHTML = '<div class="chg-empty">Nenhuma cobrança extra aberta.</div>'; return; }
   el.innerHTML = open.map(c => {
-    const rows = chargeRows(c.id); const paidN = rows.filter(x => x.r.paid).length;
-    const falta = rows.filter(x => !x.r.paid).reduce((s,x) => s + Number(x.r.val||0), 0);
-    const done = rows.length && paidN === rows.length;
-    const ord = x => x.r.paid ? 2 : x.claim ? 0 : 1;
-    const chips = rows.slice().sort((a,b) => ord(a) - ord(b) || a.name.localeCompare(b.name)).map(x =>
-      `<button type="button" class="chg-p ${x.r.paid ? 'paid' : x.claim ? 'claim' : ''}" title="${x.r.paid ? 'Pago — toque para desfazer' : x.claim ? 'Avisou que pagou — toque para confirmar' : 'Toque para marcar pago'}"
-        onclick="chargeTogglePaid(${c.id}, '${x.k}', ${x.r.id})">${x.r.paid ? ic('check') : x.claim ? ic('clock') : ''}${finEsc(x.name)}</button>`).join('');
+    const rows = chargeRows(c.id); const doneN = rows.filter(x => x.done).length;
+    const falta = rows.reduce((s,x) => s + x.open, 0), recebido = rows.reduce((s,x) => s + x.paidSum, 0);
+    const done = rows.length && doneN === rows.length;
+    const ord = x => x.done ? 3 : x.claim ? 0 : x.partial ? 1 : 2;
+    const chips = rows.slice().sort((a,b) => ord(a) - ord(b) || a.name.localeCompare(b.name)).map(x => {
+      const cls = x.done ? 'paid' : x.claim ? 'claim' : x.partial ? 'part' : '';
+      const extra = !x.done && (x.partial || Math.abs(x.open - c.val) > 0.009) ? `<small>falta ${finFmt(x.open)}</small>` : '';
+      return `<button type="button" class="chg-p ${cls}" onclick="chgSheetOpen(${c.id}, '${x.pk}')">${x.done ? ic('check') : x.claim ? ic('clock') : ''}${finEsc(x.name)}${extra}</button>`;
+    }).join('');
     return `<div class="chg-card ${done ? 'done' : ''}">
-      <div class="chg-head"><div><b>${finEsc(c.title)}</b><small>${finFmt(c.val)} por pessoa · ${paidN} de ${rows.length} pagaram</small></div>
+      <div class="chg-head"><div><b>${finEsc(c.title)}</b><small>${finFmt(c.val)} por pessoa · ${doneN} de ${rows.length} pagaram${recebido ? ' · recebido ' + finFmt(recebido) : ''}</small></div>
         <div class="chg-tot">${done ? 'Todos pagaram' : 'faltam ' + finFmt(falta)}</div></div>
-      <div class="chg-bar"><i style="width:${rows.length ? Math.round(paidN*100/rows.length) : 0}%"></i></div>
+      <div class="chg-bar"><i style="width:${(recebido + falta) ? Math.round(recebido*100/(recebido+falta)) : 0}%"></i></div>
       <div class="chg-list">${chips || '<span class="chg-empty">Ninguém na cobrança.</span>'}</div>
       <div class="fin-2btn">
         ${done ? '' : `<button type="button" class="btn wa-btn" onclick="chargeSendWa(${c.id})">📤 Cobrar no WhatsApp</button>`}
@@ -3847,13 +3965,14 @@ function renderCharges(){
 function chargeWaText(c){
   const rows = chargeRows(c.id);
   const pixNome = (typeof FEE_PIX_LABEL !== 'undefined' ? FEE_PIX_LABEL : '').replace(/^PIX Mensalidade/i, 'Pix').trim() || 'Pix';
-  const falta = rows.filter(x => !x.r.paid).length;
+  const falta = rows.filter(x => !x.done).length;
   const pad = n => String(n).padStart(2, '0');
   let msg = `${WA_BRAND_HEADER}\n💰 *${c.title} — ${finFmt(c.val)} por pessoa*\n`;
   if(typeof FEE_PIX_KEY !== 'undefined' && FEE_PIX_KEY) msg += `📲 *${pixNome}:* ${FEE_PIX_KEY}\n`;
   msg += `\n⏰ Faltam *${falta}* para fechar. Bora agilizar, pessoal!\n\n`;
   msg += `👉 Pagou? Copia a lista, coloca ✅ do lado do seu nome e manda aqui com o comprovante.\n\n`;
-  msg += rows.map((x, i) => `${pad(i+1)} - ${x.name}${x.r.paid ? ' ✅' : x.claim ? ' ⏳ (conferindo comprovante)' : ''}`).join('\n');
+  msg += rows.map((x, i) => `${pad(i+1)} - ${x.name}${x.done ? ' ✅' : x.claim ? ' ⏳ (conferindo comprovante)'
+    : (x.partial || Math.abs(x.open - c.val) > 0.009) ? ` (falta ${finFmt(x.open)})` : ''}`).join('\n');
   return msg;
 }
 function chargeSendWa(cid){
@@ -3869,7 +3988,8 @@ let _extrasPubLast = null;
 function extrasPublish(){
   if(!finIsAdmin()) return;
   const list = finCharges().filter(c => !c.closed).map(c => ({ id:c.id, title:c.title, val:c.val,
-    owed: chargeRows(c.id).filter(x => !x.r.paid && x.pl).map(x => x.pl.id) })).filter(c => c.owed.length);
+    owed: [], amt: {} })).map(c => { chargeRows(c.id).filter(x => !x.done && x.pl).forEach(x => { c.owed.push(x.pl.id); c.amt[x.pl.id] = x.open; }); return c; })
+    .filter(c => c.owed.length);
   const str = JSON.stringify(list);
   extrasPub = list; try{ localStorage.setItem(EXTRAS_KEY, str); }catch(e){}
   if(typeof fbDB === 'undefined' || !fbDB || !fbAuth || !fbAuth.currentUser) return;
@@ -4338,14 +4458,14 @@ function renderFinTodo(){
     const rows = chargeRows(c.id);
     rows.filter(x => x.claim).forEach(x => items.push({ st:'claim', due:'', html: `<div class="todo-row claim">
       <div class="todo-ico">${ic('clock')}</div>
-      <div class="todo-t">${finEsc(x.name)} avisou que pagou<small>${finEsc(c.title)} · ${finFmt(x.r.val)} · confira o comprovante</small></div>
-      <button type="button" class="todo-btn green" onclick="chargeTogglePaid(${c.id}, '${x.k}', ${x.r.id})">${ic('check')} Confirmar</button>
+      <div class="todo-t">${finEsc(x.name)} avisou que pagou<small>${finEsc(c.title)} · ${finFmt(x.open)} · confira o comprovante</small></div>
+      <button type="button" class="todo-btn green" onclick="chargeReceive(${c.id}, '${x.pk}', null)">${ic('check')} Confirmar</button>
       <button type="button" class="todo-x" title="Não recebi" onclick="extraSetClaim(${x.pl.id}, ${c.id}, false)">${ic('x')}</button></div>` }));
-    const pend = rows.filter(x => !x.r.paid);
+    const pend = rows.filter(x => !x.done);
     if(!pend.length) return;
     items.push({ st:'pending', due:'', html: `<div class="todo-row pending">
       <div class="todo-ico">${ic('users')}</div>
-      <div class="todo-t">${finEsc(c.title)}: faltam ${pend.length}<small>Cobrança extra · ${rows.length - pend.length} de ${rows.length} pagaram · ${finFmt(pend.reduce((s,x)=>s+Number(x.r.val||0),0))}</small></div>
+      <div class="todo-t">${finEsc(c.title)}: faltam ${pend.length}<small>Cobrança extra · ${rows.length - pend.length} de ${rows.length} pagaram · ${finFmt(pend.reduce((s,x)=>s+x.open,0))}</small></div>
       <button type="button" class="todo-btn gold" onclick="finSubTab('fees');setTimeout(()=>{const e=document.getElementById('fin-charges-label');if(e)e.scrollIntoView({behavior:'smooth'});},150)">Ver</button></div>` });
   });
   (md.recvs||[]).forEach(r => {
@@ -4956,7 +5076,7 @@ function finSendCobranca(){
     .sort((a,b)=>a.name.localeCompare(b.name));
   const recvOverdue = recvPend.some(r => finStatus(false, finEntryDueISO(r, finYear, finMonth)) === 'overdue');
 
-  const chargesOpen = finCharges().filter(c => !c.closed).map(c => ({ c, pend: chargeRows(c.id).filter(x => !x.r.paid) })).filter(x => x.pend.length);
+  const chargesOpen = finCharges().filter(c => !c.closed).map(c => ({ c, pend: chargeRows(c.id).filter(x => !x.done) })).filter(x => x.pend.length);
   if(!pendList.length && !recvPend.length && !chargesOpen.length){
     toast('✅ Ninguém está pendente este mês!');
     return;
@@ -4989,7 +5109,7 @@ function finSendCobranca(){
     msg += recvPend.map(r => `• ${finRecvLabel(r)} — ${finFmt(r.val)} _(${finRecvCat(r)})_`).join('\n');
   }
   chargesOpen.forEach(({ c, pend }) => {
-    msg += `\n\n⚽ *${c.title} (${finFmt(c.val)}):* ainda falta${pend.length===1?'':'m'} ${pend.map(x => x.name + (x.claim ? ' ⏳' : '')).join(', ')}. Aproveita e manda junto com a mensalidade 🙏`;
+    msg += `\n\n⚽ *${c.title} (${finFmt(c.val)}):* ainda falta${pend.length===1?'':'m'} ${pend.map(x => x.name + (x.claim ? ' ⏳' : (x.partial || Math.abs(x.open - c.val) > 0.009) ? ` (${finFmt(x.open)})` : '')).join(', ')}. Aproveita e manda junto com a mensalidade 🙏`;
   });
 
   document.getElementById('cobranca-modal-title-txt').textContent = '📤 Cobrança de Mensalidade';
@@ -6682,6 +6802,10 @@ function recvMultiFilter(){
   });
 }
 
+function recvMultiSetAll(on){
+  [...document.querySelectorAll('#recv-multi-list input[type="checkbox"]')]
+    .filter(b => b.closest('.chur-multi-item').style.display !== 'none').forEach(b => b.checked = !!on);
+}
 function recvMultiToggleAll(){
   const boxes = [...document.querySelectorAll('#recv-multi-list input[type="checkbox"]')]
     .filter(b => b.closest('.chur-multi-item').style.display !== 'none');
