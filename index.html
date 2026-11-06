@@ -2793,6 +2793,7 @@ function gameCancelMsg(c){
 function gameCancelPush(){
   try{ localStorage.setItem(GAME_CANCEL_KEY, JSON.stringify(gameCancel)); }catch(e){}
   if(typeof fbDB === 'undefined' || !fbDB || !fbAuth || !fbAuth.currentUser) return;
+  if(window.__ufgPlayersReady){ noticesPush(); return; }
   const ts = Date.now(); _fbLastWriteTs.gameTime = ts;
   fbDB.collection('ufg').doc('gameTime').set({ cancel: gameCancel || null, updatedAt: ts }, { merge: true })
     .then(() => setSyncStatus('synced'))
@@ -2945,7 +2946,7 @@ function feeAlertOpen(force){
   const key = 'ufg_fee_alert_last';
   if(!force){
     try{ const last = +localStorage.getItem(key) || 0; if(Date.now() - last < FEE_ALERT_EVERY) return; }catch(e){}
-    if(typeof fbDB !== 'undefined' && fbDB && (!window.__ufgPlayersReady || !window.__ufgGameTimeReady)) return; // espera o status da nuvem
+    if(typeof fbDB !== 'undefined' && fbDB && !window.__ufgPlayersReady) return; // espera o status da nuvem
     const who = document.getElementById('who-overlay');
     if(who && who.style.display === 'flex') return;
   }
@@ -3983,7 +3984,48 @@ function chargeSendWa(cid){
   document.getElementById('cobranca-modal-preview').value = msg;
   document.getElementById('cobranca-modal-overlay').style.display = 'flex';
 }
-// Publica para os jogadores quem falta em cada cobrança aberta (doc gameTime, merge)
+// ─── AVISOS PARA TODOS (jogo cancelado + cobranças extras) ────────────
+// Ficam no doc "players" (campo notices), que todo mundo já lê e grava — o doc
+// gameTime pode estar bloqueado pelas regras do Firebase. O gameTime segue
+// recebendo uma cópia, só como reserva para versões antigas.
+let _noticesLast = null;
+function fbKeepNotices(snap, obj){
+  const n = snap && snap.exists ? snap.data().notices : null;
+  if(n) obj.notices = n;
+  return obj;
+}
+function noticesState(){ return { cancel: gameCancel || null, extras: extrasPub || [] }; }
+function noticesPush(force){
+  if(!finIsAdmin()) return;
+  if(typeof fbDB === 'undefined' || !fbDB || !fbAuth || !fbAuth.currentUser || !window.__ufgPlayersReady) return;
+  const st = noticesState(); const str = JSON.stringify(st);
+  if(!force && str === _noticesLast) return;
+  _noticesLast = str;
+  const ts = Date.now(); _fbLastWriteTs.players = ts;
+  setSyncStatus('syncing');
+  fbDB.collection('ufg').doc('players').set({ notices: Object.assign({ at: ts }, st), updatedAt: ts }, { merge: true })
+    .then(() => setSyncStatus('synced'))
+    .catch(err => { _noticesLast = null; console.warn('Firestore write (avisos):', err.message); setSyncStatus('error');
+      toast('⚠️ Não salvou o aviso na nuvem: ' + err.message); });
+  // cópia de reserva (pode falhar sem problema)
+  try{ fbDB.collection('ufg').doc('gameTime').set({ cancel: st.cancel, extras: st.extras, updatedAt: ts }, { merge: true }).catch(() => {}); }catch(e){}
+}
+// Lê os avisos que chegaram no doc players
+function noticesApply(n){
+  if(!n){
+    // campo apagado (ex.: versão antiga do app gravou a lista): o admin publica de novo
+    if(finIsAdmin()){ _noticesLast = null; setTimeout(() => { try{ extrasPublish(); noticesPush(true); }catch(e){} }, 300); }
+    return;
+  }
+  window.__ufgNoticesSeen = true;
+  const st = { cancel: n.cancel || null, extras: Array.isArray(n.extras) ? n.extras : [] };
+  _noticesLast = JSON.stringify(st);
+  gameCancel = st.cancel;
+  try{ localStorage.setItem(GAME_CANCEL_KEY, JSON.stringify(gameCancel)); }catch(e){}
+  if(!finIsAdmin()){ extrasPub = st.extras; try{ localStorage.setItem(EXTRAS_KEY, JSON.stringify(extrasPub)); }catch(e){} }
+  else { _extrasPubLast = JSON.stringify(st.extras); setTimeout(() => { try{ extrasPublish(); }catch(e){} }, 0); }
+  try{ renderPresence(); }catch(e){}
+}
 let _extrasPubLast = null;
 function extrasPublish(){
   if(!finIsAdmin()) return;
@@ -3993,11 +4035,9 @@ function extrasPublish(){
   const str = JSON.stringify(list);
   extrasPub = list; try{ localStorage.setItem(EXTRAS_KEY, str); }catch(e){}
   if(typeof fbDB === 'undefined' || !fbDB || !fbAuth || !fbAuth.currentUser) return;
-  if(!window.__ufgGameTimeReady || str === _extrasPubLast) return;
+  if(!window.__ufgPlayersReady || str === _extrasPubLast) return;
   _extrasPubLast = str;
-  const ts = Date.now(); _fbLastWriteTs.gameTime = ts;
-  fbDB.collection('ufg').doc('gameTime').set({ extras: list, updatedAt: ts }, { merge: true })
-    .catch(err => { _extrasPubLast = null; console.warn('Firestore write (extras):', err.message); setSyncStatus('error'); });
+  noticesPush();
 }
 
 // ─── TOGGLE PAYMENT ───────────────────────────────────────────
@@ -4903,128 +4943,68 @@ function renderFinChart(months, curM){
 }
 
 
+// Fechamento enxuto: só o essencial (quem pagou, quem falta, entrou, saiu, saldo e caixa).
+function finFechamentoText(){
+  const y = finYear, m = finMonth, md = finMonthData();
+  const mes  = `${String(MONTHS[m]).toLowerCase()}/${y}`;
+  const mens = finMensalistas(y, m);
+  const pend = mens.filter(pp => !finIsFeePaid(md, pp));
+  const feesIn = finFeesIn(md);
+  const L = [];
+  L.push(WA_BRAND_HEADER);
+  L.push(`📋 *Fechamento de ${mes}*`);
+  L.push('');
+  L.push(`💳 *Mensalidades:* ${mens.length - pend.length} de ${mens.length} pagas · ${finFmt(feesIn)}`);
+  L.push(pend.length ? `🔴 Faltam: ${pend.map(pp => { const n = finMonthsOwed(pp.id); return personName(pp) + (n > 1 ? ` (${n} meses)` : ''); }).join(', ')}`
+                     : '✅ Todo mundo em dia!');
+  // Cobranças extras do mês + as que seguem abertas
+  const ckIdx = k => { const q = finParseKey(k || ''); return finMonthIdx(q.y, q.m); };
+  finCharges().filter(c => c.key === finKey(y, m) || (!c.closed && ckIdx(c.key) < finMonthIdx(y, m))).forEach(c => {
+    const rows = chargeRows(c.id); if(!rows.length) return;
+    const falta = rows.filter(x => !x.done);
+    L.push('');
+    L.push(`⚽ *${c.title}:* ${rows.length - falta.length} de ${rows.length} pagaram`);
+    if(falta.length) L.push(`🔴 Faltam: ${falta.map(x => x.name + ((x.partial || Math.abs(x.open - c.val) > 0.009) ? ` (${finFmt(x.open)})` : '')).join(', ')}`);
+  });
+  // Entradas agrupadas
+  const groups = new Map();
+  const add = (label, v) => groups.set(label, (groups.get(label) || 0) + v);
+  if(feesIn) add('Mensalidades', feesIn);
+  const guests = [];
+  (md.recvs || []).filter(r => r.paid).forEach(r => {
+    const c = r.chargeId ? chargeById(r.chargeId) : null;
+    if(c) return add(c.title, r.val);
+    const cat = finRecvCat(r);
+    if(cat === 'Convidado'){ guests.push(r); return; }
+    add(cat === 'Rateio / Extra' ? (r.note || 'Rateio / extra') : cat + (r.name ? ` (${r.name})` : ''), r.val);
+  });
+  if(guests.length) add(`Convidados (${guests.length})`, guests.reduce((s,r) => s + r.val, 0));
+  const inn = [...groups.values()].reduce((s,v) => s + v, 0);
+  const expPaid = (md.expenses || []).filter(finIsExpPaid);
+  const expPend = (md.expenses || []).filter(e => !finIsExpPaid(e));
+  const out = expPaid.reduce((s,e) => s + e.val, 0);
+  L.push('');
+  L.push(`📥 *Entrou:* ${finFmt(inn)}`);
+  groups.forEach((v, k) => L.push(`• ${k}: ${finFmt(v)}`));
+  L.push(`📤 *Saiu:* ${finFmt(out)}`);
+  expPaid.forEach(e => L.push(`• ${e.desc}: ${finFmt(e.val)}`));
+  if(expPend.length) L.push(`⏳ A pagar: ${expPend.map(e => `${e.desc} ${finFmt(e.val)}`).join(', ')}`);
+  // Saldo e caixa
+  const bal = inn - out;
+  const aRec = pend.reduce((s,pp) => s + personFee(pp, md.feeValue || 15), 0)
+             + (md.recvs || []).filter(r => !r.paid).reduce((s,r) => s + r.val, 0);
+  L.push('');
+  L.push(`${bal >= 0 ? '🟢' : '🔴'} *Saldo do mês:* ${bal >= 0 ? '+' : '−'}${finFmt(Math.abs(bal))}`);
+  L.push(`🏦 *Caixa total:* ${finFmt(finCalcTotalBalance())}`);
+  if(aRec > 0.009) L.push(`⏳ Ainda a receber: ${finFmt(aRec)}`);
+  return L.join('\n');
+}
 function finSendWA(){
-  const md     = finMonthData();
-  const dfv    = md.feeValue || 15;
-  const mLabel = MONTHS[finMonth] + ' ' + finYear;
-  const now    = new Date();
-  const today  = now.toLocaleDateString('pt-BR');
-
-  // Listas de pagantes e pendentes (por pessoa — sem duplicar ninguém)
-  const paidList = Object.keys(md.fees)
-    .map(id => personById(Number(id)))
-    .filter(pp => pp && Number(md.fees[pp.id].val) > 0)
-    .map(personName)
-    .sort((a,b)=>a.localeCompare(b));
-  const pendList = finMensalistas(finYear, finMonth)
-    .filter(pp => !finIsFeePaid(md, pp))
-    .map(pp => ({ name: personName(pp), months: finMonthsOwed(pp.id) }));
-
-  // Cálculos
-  const feesIn   = finFeesIn(md); // valores congelados no pagamento
-  const recvPaid = (md.recvs||[]).filter(r => r.paid);
-  const recvPend = (md.recvs||[]).filter(r => !r.paid);
-  const recvIn   = recvPaid.reduce((s,r) => s + r.val, 0);
-  const recvLate = r => finStatus(r.paid, finEntryDueISO(r, finYear, finMonth)) === 'overdue';
-  const expPaid  = md.expenses.filter(finIsExpPaid);
-  const expPend  = md.expenses.filter(e => !finIsExpPaid(e));
-  const out      = expPaid.reduce((s,e) => s + e.val, 0);
-  const outPend  = expPend.reduce((s,e) => s + e.val, 0);
-  const bal      = feesIn + recvIn - out;
-  const totalBal = finCalcTotalBalance();
-
-  const sep  = '▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬';
-  const sep2 = '┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄';
-
-  let msg = '';
-
-  // Cabeçalho
-  msg += `${WA_BRAND_HEADER}\n`;
-  msg += `${sep}\n`;
-  msg += `📋 *RELATÓRIO DE FECHAMENTO*\n`;
-  msg += `📅 Competência: *${mLabel}*\n`;
-  msg += `🗓️ Emitido em: ${today}\n`;
-  msg += `${sep}\n\n`;
-
-  // Mensalidades — pagos
-  msg += `💳 *MENSALIDADES — ${mLabel.toUpperCase()}*\n`;
-  msg += `${sep2}\n`;
-  msg += `📌 Valor unitário: *${finFmt(dfv)}*\n\n`;
-
-  if(paidList.length){
-    msg += `✅ *Confirmados (${paidList.length}):* ${paidList.join(', ')}\n\n`;
-  }
-
-  if(pendList.length){
-    msg += `🔴 *Pendentes (${pendList.length}):* ${pendList.map(p => p.months > 1 ? `${p.name} ⚠️${p.months}m` : p.name).join(', ')}\n\n`;
-  }
-
-  msg += `💰 Subtotal mensalidades: *${finFmt(feesIn)}*\n`;
-
-  // Receitas avulsas — uma seção por categoria (convidados ≠ rateio da bola ≠ mensalidade)
-  if((md.recvs||[]).length){
-    RECV_CATEGORIES.forEach(cat => {
-      const items = md.recvs.filter(r => finRecvCat(r) === cat);
-      if(!items.length) return;
-      const got = items.filter(r => r.paid).reduce((s,r) => s + r.val, 0);
-      msg += `\n${sep2}\n`;
-      msg += `${RECV_CAT_ICON[cat] || '📌'} *${cat.toUpperCase()}${cat === 'Convidado' ? 'S' : ''}*\n`;
-      msg += `${sep2}\n`;
-      items.filter(r => r.paid).forEach(r => msg += `  ✅ ${finRecvLabel(r)}: *${finFmt(r.val)}*\n`);
-      items.filter(r => !r.paid).forEach(r => msg += `  ${recvLate(r) ? '⚠️' : '⏳'} ${finRecvLabel(r)}: ${finFmt(r.val)} _(${recvLate(r) ? 'vencido' : 'a receber'})_\n`);
-      msg += `💰 Subtotal: *${finFmt(got)}*\n`;
-    });
-    msg += `\n💰 Total receitas avulsas recebidas: *${finFmt(recvIn)}*\n`;
-    if(recvPend.length){
-      const pendVal = recvPend.reduce((s,r)=>s+r.val,0);
-      msg += `⌛ A receber: *${finFmt(pendVal)}*\n`;
-    }
-  }
-
-  // Gastos
-  if(md.expenses.length){
-    msg += `\n${sep2}\n`;
-    msg += `📤 *GASTOS DO MÊS*\n`;
-    msg += `${sep2}\n`;
-    if(expPaid.length){
-      expPaid.forEach((e,i) => msg += `  ✅ ${i+1}. ${e.desc}: *${finFmt(e.val)}*\n`);
-    }
-    if(expPend.length){
-      expPend.forEach((e,i) => msg += `  ⏳ ${i+1}. ${e.desc}: ${finFmt(e.val)} _(provisão, ainda não pago)_\n`);
-    }
-    msg += `📉 Total saídas (pagas): *${finFmt(out)}*\n`;
-    if(outPend > 0){
-      msg += `⌛ Provisão (a pagar): *${finFmt(outPend)}*\n`;
-    }
-  }
-
-  // Resumo financeiro
-  msg += `\n${sep}\n`;
-  msg += `📊 *RESUMO FINANCEIRO*\n`;
-  msg += `${sep}\n`;
-  msg += `📥 Total entradas: *${finFmt(feesIn + recvIn)}*\n`;
-  msg += `📤 Total saídas:   *${finFmt(out)}*\n`;
-  if(outPend > 0){
-    msg += `⌛ Provisão a pagar: *${finFmt(outPend)}*\n`;
-  }
-  msg += `${sep2}\n`;
-  const balSign = bal >= 0 ? '🟢' : '🔴';
-  msg += `${balSign} Saldo ${mLabel}: *${bal >= 0 ? '+' : ''}${finFmt(bal)}*\n`;
-  msg += `🏦 Caixa total em conta: *${finFmt(totalBal)}*\n`;
-  msg += `${sep}\n`;
-  msg += `_Gerenciador Oficial UFG · Since 2025_ ⚽`;
-
-  // Copia para área de transferência
-  navigator.clipboard.writeText(msg)
-    .then(() => toast('✅ Relatório copiado para a área de transferência!'))
-    .catch(() => {
-      const ta = document.createElement('textarea');
-      ta.value = msg; document.body.appendChild(ta); ta.select();
-      document.execCommand('copy'); document.body.removeChild(ta);
-      toast('✅ Relatório copiado!');
-    });
-
-  window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank');
+  const msg = finFechamentoText();
+  document.getElementById('cobranca-modal-title-txt').textContent = '📤 Fechamento de ' + String(MONTHS[finMonth]).toLowerCase();
+  _cobrancaModalMsg = msg;
+  document.getElementById('cobranca-modal-preview').value = msg;
+  document.getElementById('cobranca-modal-overlay').style.display = 'flex';
 }
 
 // Conta quantos meses consecutivos (incluindo o atual) o jogador está devendo.
@@ -6484,7 +6464,7 @@ function fbPushPresence(id, fields){
     cp.declined = !!fields.declined;
     listAutoReset(arr); // carimba o ciclo do jogo na marcação nova
     ts = Date.now(); _fbLastWriteTs.players = ts;
-    tx.set(ref, { data: arr, updatedAt: ts });
+    tx.set(ref, fbKeepNotices(snap, { data: arr, updatedAt: ts }));
     return arr;
   }).then(arr => { delete _fbPendingPresence[id]; fbApplyPlayersResult(arr, ts); })
     .catch(err => { console.warn('Firestore presença:', err.message); setSyncStatus('error'); toast('⚠️ Não salvou na nuvem. Confira a internet e toque de novo.'); });
@@ -6503,7 +6483,7 @@ function fbPushFeeClaim(id, claim, extraClaims){
     if(extraClaims !== undefined){ if(extraClaims && Object.keys(extraClaims).length) cp.extraClaims = extraClaims; else delete cp.extraClaims; }
     listAutoReset(arr);
     ts = Date.now(); _fbLastWriteTs.players = ts;
-    tx.set(ref, { data: arr, updatedAt: ts });
+    tx.set(ref, fbKeepNotices(snap, { data: arr, updatedAt: ts }));
     return arr;
   }).then(arr => fbApplyPlayersResult(arr, ts))
     .catch(err => { console.warn('Firestore (pagamento informado):', err.message); setSyncStatus('error'); toast('⚠️ Não salvou na nuvem. Confira a internet e tente de novo.'); });
@@ -6544,7 +6524,7 @@ function fbPushPlayers(local, overridePresence){
         if(c.extraClaims) p.extraClaims = c.extraClaims; else delete p.extraClaims; }); }
     listAutoReset(mine);
     ts = Date.now(); _fbLastWriteTs.players = ts;
-    tx.set(ref, { data: mine, updatedAt: ts });
+    tx.set(ref, fbKeepNotices(snap, { data: mine, updatedAt: ts }));
     return mine;
   }).then(arr => fbApplyPlayersResult(arr, ts))
     .catch(err => { console.warn('Firestore write (players):', err.message); setSyncStatus('error'); });
@@ -6624,12 +6604,14 @@ function fbStartSync(){
 
   // Presença + Elenco — qualquer autenticado (admin ou jogador) sincroniza
   window.__ufgPlayersReady = false;
+  window.__ufgNoticesSeen = false;
   _fbUnsubPlayers = fbDB.collection('ufg').doc('players').onSnapshot(snap => {
     if(!snap.exists){ window.__ufgPlayersReady = true; fbFlushPendingPresence(); return; }
     const d = snap.data();
     const firstLoad = !window.__ufgPlayersReady;
     window.__ufgPlayersReady = true;
     if(firstLoad) setTimeout(fbFlushPendingPresence, 0);
+    noticesApply(d.notices || null);
     if(d.updatedAt === _fbLastWriteTs.players) return; // eco da própria escrita — ignora, evita o "piscar"
     if(_presenceInteracting){
       _pendingRemotePlayers = d.data; // adia até o toque em andamento terminar
@@ -6647,24 +6629,21 @@ function fbStartSync(){
   window.__ufgGameTimeReady = false;
   _fbUnsubGameTime = fbDB.collection('ufg').doc('gameTime').onSnapshot(snap => {
     window.__ufgGameTimeReady = true;
-    if(!snap.exists){ extrasPub = []; _extrasPubLast = '[]'; try{ renderPresence(); }catch(e){} return; }
+    if(!snap.exists) return;
     const d = snap.data();
-    extrasPub = Array.isArray(d.extras) ? d.extras : [];
-    _extrasPubLast = JSON.stringify(extrasPub);
-    try{ localStorage.setItem(EXTRAS_KEY, _extrasPubLast); }catch(e){}
-    try{ renderPresence(); }catch(e){}
-    try{ if(finIsAdmin()) extrasPublish(); }catch(e){}
+    if(!window.__ufgNoticesSeen && !finIsAdmin()){ // reserva: só enquanto o doc players não trouxe avisos
+      if(Array.isArray(d.extras)){ extrasPub = d.extras; try{ localStorage.setItem(EXTRAS_KEY, JSON.stringify(extrasPub)); }catch(e){} }
+      if('cancel' in d){ gameCancel = d.cancel || null; try{ localStorage.setItem(GAME_CANCEL_KEY, JSON.stringify(gameCancel)); }catch(e){} }
+      try{ renderPresence(); }catch(e){}
+    }
     if(d.updatedAt === _fbLastWriteTs.gameTime) return;
-    gameCancel = d.cancel || null;
-    try{ localStorage.setItem(GAME_CANCEL_KEY, JSON.stringify(gameCancel)); }catch(e){}
-    try{ renderPresence(); }catch(e){}
     if(typeof d.data === 'string' && d.data) gameTime = d.data;
     localStorage.setItem(GAME_TIME_KEY, gameTime);
     const timeInp = document.getElementById('vagas-modal-time');
     if(timeInp) timeInp.value = gameTime;
     vagasModalUpdatePreview();
     setSyncStatus('synced');
-  }, err => { console.warn('Firestore sync (gameTime):', err.message); setSyncStatus('error'); });
+  }, err => { window.__ufgGameTimeReady = true; console.warn('Firestore sync (gameTime):', err.message); });
 
   // Churrasco — admin e jogador (o jogador também lança e marca pagamentos)
   _fbUnsubChur = fbDB.collection('ufg').doc('churrasco').onSnapshot(snap => {
